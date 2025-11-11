@@ -3,69 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Painel Supabase - Produção CNC</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Painel de Produção CNC</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f2f4f8; padding: 20px; }
-    h1 { text-align: center; color: #333; }
-    table { border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow: hidden; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-    th { background-color: #007bff; color: white; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      text-align: center;
+    }
+    h1 {
+      color: #0055a5;
+    }
+    #contador {
+      font-size: 3em;
+      margin: 20px 0;
+      color: #0070f3;
+    }
+    button {
+      padding: 10px 20px;
+      background: #0070f3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+      font-size: 1.1em;
+    }
+    button:hover {
+      background: #0055a5;
+    }
+    canvas {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
+  <h1>Painel de Produção CNC</h1>
+  <div>Total de Peças Produzidas:</div>
+  <div id="contador">0</div>
+  <button id="btnAdicionar">Simular Nova Peça</button>
 
-<h1>📊 Painel de Produção CNC</h1>
+  <canvas id="grafico"></canvas>
 
-<table id="tabela">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Máquina</th>
-      <th>Quantidade</th>
-      <th>Data/Hora</th>
-      <th>Turno</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-<script>
-  // Cole aqui seus dados do Supabase 👇
-  const SUPABASE_URL = "https://vftkjcunbnzzihumqauu.supabase.co"; // substitua aqui
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmdGtqY3VuYm56emlodW1xYXV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4NDc5ODYsImV4cCI6MjA3ODQyMzk4Nn0.V9gVX-sW51TAsggM_H0MKS6Ro3SF-j3OBlzuuysws9U"; // substitua aqui
+    // 🔧 Substitua abaixo pelas suas chaves do Supabase
+    const SUPABASE_URL = "https://SEU-PROJETO.supabase.co";
+    const SUPABASE_KEY = "SUA-CHAVE-ANON-PUBLIC";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  async function carregar() {
-    const { data, error } = await supabase
-      .from('máquinas') // nome da sua tabela
-      .select('*')
-      .order('data_hora', { ascending: false });
-
-    if (error) {
-      alert("Erro ao carregar dados: " + error.message);
-      return;
+    // Função: contar peças
+    async function atualizarContador() {
+      const { data, error } = await supabase.from("producao").select("*");
+      if (error) {
+        console.error("Erro ao buscar dados:", error);
+        return;
+      }
+      document.getElementById("contador").textContent = data.length;
+      atualizarGrafico(data);
     }
 
-    const corpo = document.querySelector('#tabela tbody');
-    corpo.innerHTML = '';
-
-    data.forEach(item => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${item.id}</td>
-        <td>${item.maquina_id}</td>
-        <td>${item.quantidade}</td>
-        <td>${new Date(item.data_hora).toLocaleString()}</td>
-        <td>${item.turno}</td>
-      `;
-      corpo.appendChild(tr);
+    // Função: inserir nova peça
+    document.getElementById("btnAdicionar").addEventListener("click", async () => {
+      const { error } = await supabase.from("producao").insert([{ data_hora: new Date().toISOString() }]);
+      if (error) {
+        console.error("Erro ao inserir:", error);
+      } else {
+        atualizarContador();
+      }
     });
-  }
 
-  carregar();
-</script>
+    // Função: atualizar gráfico
+    function atualizarGrafico(dados) {
+      const porDia = {};
+      dados.forEach((item) => {
+        const dia = new Date(item.data_hora).toLocaleDateString("pt-BR");
+        porDia[dia] = (porDia[dia] || 0) + 1;
+      });
+      const ctx = document.getElementById("grafico").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: Object.keys(porDia),
+          datasets: [
+            {
+              label: "Peças por dia",
+              data: Object.values(porDia),
+            },
+          ],
+        },
+      });
+    }
 
+    atualizarContador();
+  </script>
 </body>
 </html>
