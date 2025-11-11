@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Supabase - Produção CNC</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f2f4f8; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    table { border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow: hidden; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #007bff; color: white; }
+  </style>
+</head>
+<body>
+
+<h1>📊 Painel de Produção CNC</h1>
+
+<table id="tabela">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Máquina</th>
+      <th>Quantidade</th>
+      <th>Data/Hora</th>
+      <th>Turno</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  // Cole aqui seus dados do Supabase 👇
+  const SUPABASE_URL = "https://vftkjcunbnzzihumqauu.supabase.co"; // substitua aqui
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmdGtqY3VuYm56emlodW1xYXV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI4NDc5ODYsImV4cCI6MjA3ODQyMzk4Nn0.V9gVX-sW51TAsggM_H0MKS6Ro3SF-j3OBlzuuysws9U"; // substitua aqui
+
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  async function carregar() {
+    const { data, error } = await supabase
+      .from('máquinas') // nome da sua tabela
+      .select('*')
+      .order('data_hora', { ascending: false });
+
+    if (error) {
+      alert("Erro ao carregar dados: " + error.message);
+      return;
+    }
+
+    const corpo = document.querySelector('#tabela tbody');
+    corpo.innerHTML = '';
+
+    data.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.id}</td>
+        <td>${item.maquina_id}</td>
+        <td>${item.quantidade}</td>
+        <td>${new Date(item.data_hora).toLocaleString()}</td>
+        <td>${item.turno}</td>
+      `;
+      corpo.appendChild(tr);
+    });
+  }
+
+  carregar();
+</script>
+
+</body>
+</html>
