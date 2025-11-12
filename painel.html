@@ -135,14 +135,23 @@
     </table>
   </main>
 
+  <!-- Biblioteca Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
   <script>
-    // Verifica se há operador logado
+    // Configurações do Supabase (as mesmas do index.html)
+    const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Dados do operador logado
     const operadorNome = localStorage.getItem("operador_nome");
-    if (!operadorNome) {
+    const operadorId = localStorage.getItem("operador_id");
+
+    if (!operadorNome || !operadorId) {
       window.location.href = "index.html";
     }
 
-    // Exibe o nome do operador
     document.getElementById("operadorNome").textContent = operadorNome;
 
     // Botão de sair
@@ -151,30 +160,65 @@
       window.location.href = "index.html";
     });
 
-    // Adiciona peças na tabela
     const form = document.getElementById("formPeca");
     const tabela = document.querySelector("#tabelaPecas tbody");
 
-    form.addEventListener("submit", (e) => {
+    // Função para carregar a produção do operador
+    async function carregarProducao() {
+      const { data, error } = await supabaseClient
+        .from("producao")
+        .select("*")
+        .eq("operador_id", operadorId)
+        .order("datahora", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao carregar produção:", error);
+        return;
+      }
+
+      tabela.innerHTML = "";
+      data.forEach((registro) => {
+        const linha = document.createElement("tr");
+        const dataFormatada = new Date(registro.datahora).toLocaleString("pt-BR");
+        linha.innerHTML = `
+          <td>${dataFormatada}</td>
+          <td>${registro.peca}</td>
+          <td>${registro.quantidade}</td>
+        `;
+        tabela.appendChild(linha);
+      });
+    }
+
+    // Adicionar nova peça
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const nomePeca = document.getElementById("nomePeca").value.trim();
-      const quantidade = document.getElementById("quantidade").value;
+      const quantidade = parseInt(document.getElementById("quantidade").value);
 
       if (!nomePeca || quantidade <= 0) return;
 
-      const novaLinha = document.createElement("tr");
-      const dataAtual = new Date().toLocaleString("pt-BR");
+      const { error } = await supabaseClient.from("producao").insert([
+        {
+          operador_id: operadorId,
+          operador_nome: operadorNome,
+          peca: nomePeca,
+          quantidade: quantidade,
+          datahora: new Date().toISOString(),
+        },
+      ]);
 
-      novaLinha.innerHTML = `
-        <td>${dataAtual}</td>
-        <td>${nomePeca}</td>
-        <td>${quantidade}</td>
-      `;
-
-      tabela.appendChild(novaLinha);
-      form.reset();
+      if (error) {
+        alert("Erro ao registrar peça.");
+        console.error(error);
+      } else {
+        form.reset();
+        await carregarProducao();
+      }
     });
+
+    // Carrega a lista ao abrir a página
+    carregarProducao();
   </script>
 </body>
 </html>
