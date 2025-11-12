@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Produção CNC</title>
+  <title>Login do Operador - Produção CNC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,19 +12,22 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 30px;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
     h1 {
+      margin-bottom: 30px;
       color: #38bdf8;
     }
-    .container {
-      background-color: rgba(255,255,255,0.1);
-      padding: 20px;
+    .login-container {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 30px;
       border-radius: 12px;
-      width: 350px;
+      width: 320px;
       box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
-    select, button {
+    input {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
@@ -33,98 +36,90 @@
       font-size: 16px;
     }
     button {
+      width: 100%;
+      padding: 10px;
       background-color: #38bdf8;
       color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
       cursor: pointer;
+      margin-top: 10px;
     }
     button:hover {
       background-color: #0284c7;
     }
     #mensagem {
-      margin-top: 10px;
+      margin-top: 15px;
       font-size: 14px;
+      color: #fbbf24;
     }
   </style>
 </head>
 <body>
-  <h1>Painel de Produção CNC</h1>
-  <div class="container">
-    <p id="operadorLogado">Operador: </p>
-
-    <label for="maquina">Máquina:</label>
-    <select id="maquina">
-      <option value="">Selecione a máquina</option>
-      <option value="Torno1">Torno 1</option>
-      <option value="Torno2">Torno 2</option>
-      <option value="Fresa1">Fresa 1</option>
-    </select>
-
-    <label for="peca">Peça:</label>
-    <select id="peca">
-      <option value="">Selecione a peça</option>
-      <option value="PE001">PE001 - Parafuso</option>
-      <option value="PE002">PE002 - Engrenagem</option>
-      <option value="PE003">PE003 - Eixo</option>
-    </select>
-
-    <button id="iniciarBtn">Iniciar Produção</button>
+  <h1>Controle de Produção CNC</h1>
+  <div class="login-container">
+    <input id="codigo" placeholder="Código do operador (ex: OP001)" />
+    <input id="senha" type="password" placeholder="Senha" />
+    <button id="entrarBtn">Entrar</button>
     <div id="mensagem"></div>
   </div>
 
-  <!-- Biblioteca Supabase -->
+  <!--1️⃣ Biblioteca oficial do Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
+  <!-- 2️⃣ Seu código JavaScript -->
   <script>
-    // 🔗 Substitua pelos seus dados do Supabase
+    // 🔗 Substitua pelos seus dados reais do Supabase
     const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Mostrar operador logado
-    const operadorNome = localStorage.getItem("operador_nome") || "Desconhecido";
-    const operadorId = localStorage.getItem("operador_id") || null;
-    document.getElementById("operadorLogado").textContent = `Operador: ${operadorNome}`;
+    const btnEntrar = document.getElementById("entrarBtn");
+    const msg = document.getElementById("mensagem");
 
-    const btnIniciar = document.getElementById("iniciarBtn");
-    const mensagem = document.getElementById("mensagem");
+    btnEntrar.addEventListener("click", async () => {
+      const codigo = document.getElementById("codigo").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      msg.textContent = "";
 
-    btnIniciar.addEventListener("click", async () => {
-      const maquina = document.getElementById("maquina").value;
-      const peca = document.getElementById("peca").value;
-
-      if (!maquina || !peca) {
-        mensagem.style.color = "#f87171";
-        mensagem.textContent = "Selecione máquina e peça!";
+      if (!codigo || !senha) {
+        msg.textContent = "Por favor, preencha código e senha.";
         return;
       }
 
-      mensagem.style.color = "#fbbf24";
-      mensagem.textContent = "Registrando produção...";
+      msg.textContent = "Verificando...";
 
       try {
-        const { data, error } = await supabase
-          .from("producao")
-          .insert([{
-            operador_id: operadorId,
-            operador_nome: operadorNome,
-            maquina: maquina,
-            peca_codigo: peca,
-            data_hora: new Date().toISOString()
-          }]);
+        const { data, error } = await supabaseClient
+          .from("operadores")
+          .select("*")
+          .eq("codigo", codigo)
+          .eq("senha", senha);
 
         if (error) {
+          msg.textContent = "Erro de conexão com o banco.";
           console.error(error);
-          mensagem.style.color = "#f87171";
-          mensagem.textContent = "Erro ao registrar produção!";
           return;
         }
 
-        mensagem.style.color = "#4ade80";
-        mensagem.textContent = "Produção registrada com sucesso!";
+        if (data && data.length > 0) {
+          const operador = data[0];
+          msg.style.color = "#4ade80";
+          msg.textContent = "Bem-vindo, " + operador.nome + "!";
+          // Armazena o operador logado e redireciona
+          localStorage.setItem("operador_nome", operador.nome);
+          localStorage.setItem("operador_id", operador.id);
+          setTimeout(() => {
+            window.location.href = "painel.html"; // próxima página
+          }, 1000);
+        } else {
+          msg.style.color = "#f87171";
+          msg.textContent = "Código ou senha incorretos.";
+        }
       } catch (err) {
         console.error(err);
-        mensagem.style.color = "#f87171";
-        mensagem.textContent = "Erro inesperado!";
+        msg.textContent = "Erro inesperado ao fazer login.";
       }
     });
   </script>
