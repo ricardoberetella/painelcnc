@@ -62,7 +62,7 @@
       flex-wrap: wrap;
     }
 
-    input {
+    input, select {
       padding: 8px;
       border: none;
       border-radius: 6px;
@@ -87,6 +87,7 @@
       width: 100%;
       border-collapse: collapse;
       text-align: center;
+      margin-top: 15px;
     }
 
     th, td {
@@ -107,6 +108,10 @@
     #sairBtn:hover {
       background-color: #dc2626;
     }
+
+    #grafico {
+      margin-top: 30px;
+    }
   </style>
 </head>
 <body>
@@ -123,6 +128,18 @@
       <button type="submit">Adicionar</button>
     </form>
 
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:20px;">
+      <input type="date" id="filtroData" />
+      <select id="filtroMes">
+        <option value="">Mês</option>
+      </select>
+      <select id="filtroAno">
+        <option value="">Ano</option>
+      </select>
+      <button id="aplicarFiltro">Filtrar</button>
+      <button id="limparFiltro">Limpar</button>
+    </div>
+
     <table id="tabelaPecas">
       <thead>
         <tr>
@@ -133,28 +150,26 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <canvas id="grafico" width="800" height="300"></canvas>
   </main>
 
-  <!-- Biblioteca Supabase -->
+  <!-- Supabase e Chart.js -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
-    // Configurações do Supabase (as mesmas do index.html)
     const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Dados do operador logado
     const operadorNome = localStorage.getItem("operador_nome");
     const operadorId = localStorage.getItem("operador_id");
 
-    if (!operadorNome || !operadorId) {
-      window.location.href = "index.html";
-    }
+    if (!operadorNome || !operadorId) window.location.href = "index.html";
 
     document.getElementById("operadorNome").textContent = operadorNome;
 
-    // Botão de sair
     document.getElementById("sairBtn").addEventListener("click", () => {
       localStorage.clear();
       window.location.href = "index.html";
@@ -162,62 +177,132 @@
 
     const form = document.getElementById("formPeca");
     const tabela = document.querySelector("#tabelaPecas tbody");
+    const ctx = document.getElementById("grafico").getContext("2d");
+    let grafico;
 
-    // Função para carregar a produção do operador
-    async function carregarProducao() {
-      const { data, error } = await supabaseClient
+    const filtroData = document.getElementById("filtroData");
+    const filtroMes = document.getElementById("filtroMes");
+    const filtroAno = document.getElementById("filtroAno");
+
+    function preencherFiltros() {
+      const anoAtual = new Date().getFullYear();
+      for (let a = anoAtual; a >= anoAtual - 5; a--) {
+        const opt = document.createElement("option");
+        opt.value = a;
+        opt.textContent = a;
+        filtroAno.appendChild(opt);
+      }
+
+      const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+      meses.forEach((m, i) => {
+        const opt = document.createElement("option");
+        opt.value = i + 1;
+        opt.textContent = m;
+        filtroMes.appendChild(opt);
+      });
+    }
+
+    preencherFiltros();
+
+    async function carregarProducao(filtro = {}) {
+      let query = supabaseClient
         .from("producao")
         .select("*")
         .eq("operador_id", operadorId)
         .order("datahora", { ascending: false });
 
+      if (filtro.data) query = query.gte("datahora", filtro.data + "T00:00:00").lte("datahora", filtro.data + "T23:59:59");
+      if (filtro.mes && filtro.ano) {
+        const inicio = `${filtro.ano}-${String(filtro.mes).padStart(2, "0")}-01T00:00:00`;
+        const fim = new Date(filtro.ano, filtro.mes, 0).toISOString();
+        query = query.gte("datahora", inicio).lte("datahora", fim);
+      } else if (filtro.ano) {
+        const inicio = `${filtro.ano}-01-01T00:00:00`;
+        const fim = `${filtro.ano}-12-31T23:59:59`;
+        query = query.gte("datahora", inicio).lte("datahora", fim);
+      }
+
+      const { data, error } = await query;
       if (error) {
         console.error("Erro ao carregar produção:", error);
         return;
       }
 
       tabela.innerHTML = "";
-      data.forEach((registro) => {
+      const producaoPorPeca = {};
+
+      data.forEach((r) => {
         const linha = document.createElement("tr");
-        const dataFormatada = new Date(registro.datahora).toLocaleString("pt-BR");
-        linha.innerHTML = `
-          <td>${dataFormatada}</td>
-          <td>${registro.peca}</td>
-          <td>${registro.quantidade}</td>
-        `;
+        const dataFormatada = new Date(r.datahora).toLocaleString("pt-BR");
+        linha.innerHTML = `<td>${dataFormatada}</td><td>${r.peca}</td><td>${r.quantidade}</td>`;
         tabela.appendChild(linha);
+
+        producaoPorPeca[r.peca] = (producaoPorPeca[r.peca] || 0) + r.quantidade;
+      });
+
+      atualizarGrafico(producaoPorPeca);
+    }
+
+    function atualizarGrafico(dados) {
+      const labels = Object.keys(dados);
+      const valores = Object.values(dados);
+
+      if (grafico) grafico.destroy();
+
+      grafico = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Quantidade Produzida",
+            data: valores,
+            backgroundColor: "#38bdf8"
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
       });
     }
 
-    // Adicionar nova peça
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const nomePeca = document.getElementById("nomePeca").value.trim();
       const quantidade = parseInt(document.getElementById("quantidade").value);
-
       if (!nomePeca || quantidade <= 0) return;
 
-      const { error } = await supabaseClient.from("producao").insert([
-        {
-          operador_id: operadorId,
-          operador_nome: operadorNome,
-          peca: nomePeca,
-          quantidade: quantidade,
-          datahora: new Date().toISOString(),
-        },
-      ]);
+      const { error } = await supabaseClient.from("producao").insert([{
+        operador_id: operadorId,
+        operador_nome: operadorNome,
+        peca: nomePeca,
+        quantidade,
+        datahora: new Date().toISOString(),
+      }]);
 
-      if (error) {
-        alert("Erro ao registrar peça.");
-        console.error(error);
-      } else {
+      if (error) alert("Erro ao registrar peça.");
+      else {
         form.reset();
         await carregarProducao();
       }
     });
 
-    // Carrega a lista ao abrir a página
+    document.getElementById("aplicarFiltro").addEventListener("click", () => {
+      carregarProducao({
+        data: filtroData.value || null,
+        mes: filtroMes.value || null,
+        ano: filtroAno.value || null,
+      });
+    });
+
+    document.getElementById("limparFiltro").addEventListener("click", () => {
+      filtroData.value = "";
+      filtroMes.value = "";
+      filtroAno.value = "";
+      carregarProducao();
+    });
+
     carregarProducao();
   </script>
 </body>
