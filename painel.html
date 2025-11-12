@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Painel de Produção - CNC</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Produção CNC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,149 +16,111 @@
       align-items: center;
       min-height: 100vh;
     }
-
     header {
-      width: 100%;
       background-color: #1e293b;
+      width: 100%;
       padding: 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
-
-    header h1 {
-      margin: 0;
+    h1 {
       color: #38bdf8;
-      font-size: 20px;
+      margin: 0;
+      font-size: 22px;
     }
-
-    #operadorNome {
+    #operador {
       font-weight: bold;
       color: #fbbf24;
     }
-
-    main {
-      flex: 1;
-      width: 90%;
-      max-width: 900px;
-      margin-top: 30px;
-      background-color: rgba(255, 255, 255, 0.1);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    }
-
-    h2 {
-      color: #38bdf8;
-      text-align: center;
-    }
-
-    form {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    input, select {
-      padding: 8px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
     button {
       background-color: #38bdf8;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 12px;
       color: white;
-      font-size: 14px;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #0284c7;
     }
-
+    main {
+      margin-top: 40px;
+      width: 90%;
+      max-width: 800px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+    h2 {
+      text-align: center;
+      color: #38bdf8;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      text-align: center;
-      margin-top: 15px;
+      margin-top: 20px;
     }
-
     th, td {
-      padding: 10px;
-      border-bottom: 1px solid #475569;
+      border: 1px solid #38bdf8;
+      padding: 8px;
+      text-align: center;
     }
-
     th {
-      color: #38bdf8;
+      background-color: #1e293b;
     }
-
-    #sairBtn {
-      background-color: #f87171;
-      padding: 8px 12px;
+    input {
+      padding: 8px;
       border-radius: 6px;
+      border: none;
+      width: 100%;
     }
-
-    #sairBtn:hover {
-      background-color: #dc2626;
-    }
-
-    #grafico {
-      margin-top: 30px;
+    #mensagem {
+      text-align: center;
+      margin-top: 10px;
+      color: #fbbf24;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Produção CNC - Operador: <span id="operadorNome"></span></h1>
-    <button id="sairBtn">Sair</button>
+    <h1>Painel de Produção CNC</h1>
+    <div>
+      Operador: <span id="operador"></span>
+      <button id="sairBtn">Sair</button>
+    </div>
   </header>
 
   <main>
     <h2>Registro de Peças Produzidas</h2>
-    <form id="formPeca">
-      <input type="text" id="nomePeca" placeholder="Nome da peça" required />
-      <input type="number" id="quantidade" placeholder="Quantidade" required min="1" />
-      <button type="submit">Adicionar</button>
-    </form>
 
-    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:20px;">
-      <input type="date" id="filtroData" />
-      <select id="filtroMes">
-        <option value="">Mês</option>
-      </select>
-      <select id="filtroAno">
-        <option value="">Ano</option>
-      </select>
-      <button id="aplicarFiltro">Filtrar</button>
-      <button id="limparFiltro">Limpar</button>
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+      <input type="text" id="peca" placeholder="Nome da peça">
+      <input type="number" id="quantidade" placeholder="Quantidade">
+      <button id="adicionarBtn">Adicionar</button>
     </div>
 
     <table id="tabelaPecas">
       <thead>
         <tr>
-          <th>Data/Hora</th>
           <th>Peça</th>
           <th>Quantidade</th>
+          <th>Data/Hora</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
 
-    <canvas id="grafico" width="800" height="300"></canvas>
+    <div id="mensagem"></div>
   </main>
 
-  <!-- Supabase e Chart.js -->
+  <!-- Biblioteca do Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
+    // Conexão com o Supabase
     const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
@@ -166,144 +128,74 @@
     const operadorNome = localStorage.getItem("operador_nome");
     const operadorId = localStorage.getItem("operador_id");
 
-    if (!operadorNome || !operadorId) window.location.href = "index.html";
+    const operadorSpan = document.getElementById("operador");
+    const tabela = document.querySelector("#tabelaPecas tbody");
+    const mensagem = document.getElementById("mensagem");
 
-    document.getElementById("operadorNome").textContent = operadorNome;
+    // Se não estiver logado, volta pro login
+    if (!operadorNome || !operadorId) {
+      window.location.href = "index.html";
+    } else {
+      operadorSpan.textContent = operadorNome;
+    }
 
     document.getElementById("sairBtn").addEventListener("click", () => {
       localStorage.clear();
       window.location.href = "index.html";
     });
 
-    const form = document.getElementById("formPeca");
-    const tabela = document.querySelector("#tabelaPecas tbody");
-    const ctx = document.getElementById("grafico").getContext("2d");
-    let grafico;
+    document.getElementById("adicionarBtn").addEventListener("click", async () => {
+      const peca = document.getElementById("peca").value.trim();
+      const quantidade = parseInt(document.getElementById("quantidade").value);
+      const dataHora = new Date().toLocaleString("pt-BR");
 
-    const filtroData = document.getElementById("filtroData");
-    const filtroMes = document.getElementById("filtroMes");
-    const filtroAno = document.getElementById("filtroAno");
-
-    function preencherFiltros() {
-      const anoAtual = new Date().getFullYear();
-      for (let a = anoAtual; a >= anoAtual - 5; a--) {
-        const opt = document.createElement("option");
-        opt.value = a;
-        opt.textContent = a;
-        filtroAno.appendChild(opt);
-      }
-
-      const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-      meses.forEach((m, i) => {
-        const opt = document.createElement("option");
-        opt.value = i + 1;
-        opt.textContent = m;
-        filtroMes.appendChild(opt);
-      });
-    }
-
-    preencherFiltros();
-
-    async function carregarProducao(filtro = {}) {
-      let query = supabaseClient
-        .from("producao")
-        .select("*")
-        .eq("operador_id", operadorId)
-        .order("datahora", { ascending: false });
-
-      if (filtro.data) query = query.gte("datahora", filtro.data + "T00:00:00").lte("datahora", filtro.data + "T23:59:59");
-      if (filtro.mes && filtro.ano) {
-        const inicio = `${filtro.ano}-${String(filtro.mes).padStart(2, "0")}-01T00:00:00`;
-        const fim = new Date(filtro.ano, filtro.mes, 0).toISOString();
-        query = query.gte("datahora", inicio).lte("datahora", fim);
-      } else if (filtro.ano) {
-        const inicio = `${filtro.ano}-01-01T00:00:00`;
-        const fim = `${filtro.ano}-12-31T23:59:59`;
-        query = query.gte("datahora", inicio).lte("datahora", fim);
-      }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error("Erro ao carregar produção:", error);
+      if (!peca || !quantidade) {
+        mensagem.textContent = "Preencha o nome da peça e a quantidade.";
         return;
       }
 
-      tabela.innerHTML = "";
-      const producaoPorPeca = {};
+      // Inserir no banco de dados Supabase
+      const { error } = await supabaseClient
+        .from("producao")
+        .insert([{ operador_id: operadorId, peca, quantidade, data_hora: dataHora }]);
 
-      data.forEach((r) => {
-        const linha = document.createElement("tr");
-        const dataFormatada = new Date(r.datahora).toLocaleString("pt-BR");
-        linha.innerHTML = `<td>${dataFormatada}</td><td>${r.peca}</td><td>${r.quantidade}</td>`;
-        tabela.appendChild(linha);
-
-        producaoPorPeca[r.peca] = (producaoPorPeca[r.peca] || 0) + r.quantidade;
-      });
-
-      atualizarGrafico(producaoPorPeca);
-    }
-
-    function atualizarGrafico(dados) {
-      const labels = Object.keys(dados);
-      const valores = Object.values(dados);
-
-      if (grafico) grafico.destroy();
-
-      grafico = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{
-            label: "Quantidade Produzida",
-            data: valores,
-            backgroundColor: "#38bdf8"
-          }]
-        },
-        options: {
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-    }
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const nomePeca = document.getElementById("nomePeca").value.trim();
-      const quantidade = parseInt(document.getElementById("quantidade").value);
-      if (!nomePeca || quantidade <= 0) return;
-
-      const { error } = await supabaseClient.from("producao").insert([{
-        operador_id: operadorId,
-        operador_nome: operadorNome,
-        peca: nomePeca,
-        quantidade,
-        datahora: new Date().toISOString(),
-      }]);
-
-      if (error) alert("Erro ao registrar peça.");
-      else {
-        form.reset();
-        await carregarProducao();
+      if (error) {
+        console.error(error);
+        mensagem.textContent = "Erro ao registrar peça.";
+      } else {
+        mensagem.textContent = "Peça registrada com sucesso!";
+        adicionarNaTabela(peca, quantidade, dataHora);
+        document.getElementById("peca").value = "";
+        document.getElementById("quantidade").value = "";
       }
     });
 
-    document.getElementById("aplicarFiltro").addEventListener("click", () => {
-      carregarProducao({
-        data: filtroData.value || null,
-        mes: filtroMes.value || null,
-        ano: filtroAno.value || null,
-      });
-    });
+    function adicionarNaTabela(peca, quantidade, dataHora) {
+      const linha = document.createElement("tr");
+      linha.innerHTML = `
+        <td>${peca}</td>
+        <td>${quantidade}</td>
+        <td>${dataHora}</td>
+      `;
+      tabela.prepend(linha);
+    }
 
-    document.getElementById("limparFiltro").addEventListener("click", () => {
-      filtroData.value = "";
-      filtroMes.value = "";
-      filtroAno.value = "";
-      carregarProducao();
-    });
+    // Carregar registros já existentes do operador
+    window.addEventListener("DOMContentLoaded", async () => {
+      const { data, error } = await supabaseClient
+        .from("producao")
+        .select("*")
+        .eq("operador_id", operadorId)
+        .order("data_hora", { ascending: false });
 
-    carregarProducao();
+      if (error) {
+        console.error(error);
+        mensagem.textContent = "Erro ao carregar dados.";
+        return;
+      }
+
+      data.forEach(item => adicionarNaTabela(item.peca, item.quantidade, item.data_hora));
+    });
   </script>
 </body>
 </html>
