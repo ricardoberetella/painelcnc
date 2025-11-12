@@ -63,3 +63,122 @@
 
     button {
       background-color: #38bdf8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0284c7;
+    }
+  </style>
+</head>
+<body>
+  <header>📊 Painel de Produção CNC</header>
+
+  <div class="painel">
+    <h2>Operador: <span id="operadorNome">---</span></h2>
+    <div class="info">Máquina: <span id="maquina">---</span></div>
+    <div class="info">Peça: <span id="peca">---</span></div>
+    <div class="info">Data/Hora: <span id="dataHora">---</span></div>
+
+    <div class="contador" id="contador">0</div>
+
+    <div class="atualizando" id="atualizando">Atualizando...</div>
+    <br>
+    <button id="sairBtn">Sair</button>
+  </div>
+
+  <!-- Biblioteca Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    // 🔗 Dados do seu Supabase
+    const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // 🔹 Dados locais do operador
+    const operadorNome = localStorage.getItem("operador_nome");
+    const operadorId = localStorage.getItem("operador_id");
+
+    if (!operadorId) {
+      alert("Operador não identificado. Faça login novamente.");
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("operadorNome").textContent = operadorNome;
+
+    // 🔹 Campos de exibição
+    const maquinaEl = document.getElementById("maquina");
+    const pecaEl = document.getElementById("peca");
+    const contadorEl = document.getElementById("contador");
+    const dataHoraEl = document.getElementById("dataHora");
+    const atualizandoEl = document.getElementById("atualizando");
+
+    // 🔹 Função para formatar data/hora
+    function formatarDataHora() {
+      const agora = new Date();
+      return agora.toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "medium",
+      });
+    }
+
+    // 🔹 Atualizar dados no painel
+    async function atualizarPainel() {
+      atualizandoEl.textContent = "Atualizando...";
+
+      const { data, error } = await supabaseClient
+        .from("producao")
+        .select("*")
+        .eq("operador_id", operadorId)
+        .order("data_hora", { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error(error);
+        atualizandoEl.textContent = "Erro ao carregar dados.";
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const registro = data[0];
+        maquinaEl.textContent = registro.maquina;
+        pecaEl.textContent = registro.peca;
+        dataHoraEl.textContent = formatarDataHora();
+
+        // Buscar total produzido pelo operador
+        const { data: totalData } = await supabaseClient
+          .from("producao")
+          .select("quantidade")
+          .eq("operador_id", operadorId);
+
+        const total = totalData
+          ? totalData.reduce((sum, item) => sum + (item.quantidade || 0), 0)
+          : 0;
+
+        contadorEl.textContent = total;
+      } else {
+        maquinaEl.textContent = "---";
+        pecaEl.textContent = "---";
+        contadorEl.textContent = "0";
+      }
+
+      atualizandoEl.textContent = "Atualizado às " + formatarDataHora();
+    }
+
+    // 🔁 Atualização automática a cada 5 segundos
+    setInterval(atualizarPainel, 5000);
+    atualizarPainel();
+
+    // 🔙 Sair
+    document.getElementById("sairBtn").addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>
