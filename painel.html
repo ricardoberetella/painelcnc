@@ -1,302 +1,174 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Painel de Produção - CNC</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Produção CNC</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root{--bg:#0f172a;--panel:#111827;--accent:#38bdf8;--muted:#94a3b8;--ok:#4ade80}
-    body{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,var(--bg),#1e293b);color:#fff;margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center}
-    header{width:100%;padding:16px 20px;background:rgba(255,255,255,0.03);box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;justify-content:space-between;align-items:center}
-    header h1{color:var(--accent);margin:0;font-size:18px}
-    .container{width:94%;max-width:980px;margin-top:28px;background:rgba(255,255,255,0.04);padding:18px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.45)}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    label{font-size:13px;color:var(--muted)}
-    select,input{padding:8px;border-radius:6px;border:none;background:rgba(255,255,255,0.03);color:#fff;min-width:150px}
-    .info{margin-top:12px;font-size:16px}
-    .big {font-size:56px;font-weight:700;color:var(--ok);margin:12px 0}
-    .small-muted{color:var(--muted);font-size:13px}
-    button{padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:#032;cursor:pointer}
-    button.secondary{background:#f87171;color:#fff}
-    table{width:100%;margin-top:14px;border-collapse:collapse}
-    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:left;font-size:14px}
-    th{color:var(--accent);font-weight:600}
-    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e293b;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h2 {
+      color: #38bdf8;
+      margin-bottom: 20px;
+    }
+    select, button {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #38bdf8;
+      color: #fff;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0ea5e9;
+    }
+    #contador {
+      font-size: 60px;
+      font-weight: bold;
+      color: #22c55e;
+      margin: 15px 0;
+    }
+    #atualizado {
+      color: #facc15;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>📊 Painel de Produção - CNC</h1>
-    <div id="headerRight" class="small-muted"></div>
-  </header>
+  <h2 id="operador"></h2>
 
-  <main class="container">
-    <div class="topbar">
-      <div>
-        <div class="small-muted">Operador</div>
-        <div id="operadorNome" style="font-weight:700;font-size:18px">—</div>
-      </div>
+  <label for="maquina">Máquina:</label>
+  <select id="maquina">
+    <option value="">Selecione a máquina</option>
+  </select>
 
-      <div>
-        <div class="small-muted">Máquina</div>
-        <select id="selectMaquina"><option value="">Carregando...</option></select>
-      </div>
+  <label for="peca">Peça:</label>
+  <select id="peca">
+    <option value="">Selecione a peça</option>
+  </select>
 
-      <div>
-        <div class="small-muted">Peça</div>
-        <select id="selectPeca"><option value="">Carregando...</option></select>
-      </div>
+  <p id="dataHora"></p>
+  <div id="contador">0</div>
+  <p id="atualizado"></p>
 
-      <div>
-        <div class="small-muted">Atualização</div>
-        <div id="atualizacao" class="small-muted">—</div>
-      </div>
+  <button id="novaProducao">🔁 Iniciar nova produção</button>
+  <button id="sair">Sair</button>
 
-      <div>
-        <button id="btnSalvar">Salvar seleção</button>
-        <button id="btnSair" class="secondary">Sair</button>
-      </div>
-    </div>
-
-    <hr style="border:none;border-top:1px dashed rgba(255,255,255,0.04);margin:14px 0">
-
-    <div style="display:flex;flex-direction:column;align-items:center">
-      <div class="small-muted">Último registro</div>
-      <div id="ultimoRegistro" class="info">—</div>
-
-      <div class="small-muted">Produção total (operador + máquina + peça)</div>
-      <div id="contador" class="big">0</div>
-
-      <div id="detalhes" class="small-muted">—</div>
-    </div>
-
-    <table id="ultimosRegistros" aria-label="Últimos registros">
-      <thead>
-        <tr><th>Data/Hora</th><th>Máquina</th><th>Peça</th><th>Quantidade</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </main>
-
-  <!-- Supabase -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-  (function () {
-    // ---------- CONFIGURE AQUI ----------
-    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co"; // substitua se necessário
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
-    const supabase = supabaseCreateClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // --- Configuração do Supabase ---
+    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co"; // ⬅️ Substitua
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"; // ⬅️ Substitua
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function supabaseCreateClient(url, key) {
-      try { return supabaseJs.createClient ? supabaseJs.createClient(url, key) : supabase.createClient(url, key); }
-      catch(e){ return supabase.createClient(url, key); }
-    }
-    // ---------- /CONFIGURE AQUI ----------
+    // --- Dados do operador logado ---
+    const operador = localStorage.getItem("operador");
+    document.getElementById("operador").textContent = `Operador: ${operador || "Desconhecido"}`;
 
-    // Elementos
-    const operadorNomeEl = document.getElementById("operadorNome");
-    const selectMaquina = document.getElementById("selectMaquina");
-    const selectPeca = document.getElementById("selectPeca");
+    const maquinaSelect = document.getElementById("maquina");
+    const pecaSelect = document.getElementById("peca");
     const contadorEl = document.getElementById("contador");
-    const ultimoRegistroEl = document.getElementById("ultimoRegistro");
-    const detalhesEl = document.getElementById("detalhes");
-    const atualizacaoEl = document.getElementById("atualizacao");
-    const btnSalvar = document.getElementById("btnSalvar");
-    const btnSair = document.getElementById("btnSair");
-    const tbody = document.querySelector("#ultimosRegistros tbody");
-    const headerRight = document.getElementById("headerRight");
+    const atualizadoEl = document.getElementById("atualizado");
+    const dataHoraEl = document.getElementById("dataHora");
 
-    // Dados do operador (do index.html)
-    const operadorNome = localStorage.getItem("operador_nome");
-    const operadorId = localStorage.getItem("operador_id");
+    let maquinaAtual = "";
+    let pecaAtual = "";
 
-    if (!operadorId) {
-      alert("Operador não autenticado. Faça login.");
-      window.location.href = "index.html";
-      return;
+    // --- Atualiza data/hora ---
+    function atualizarDataHora() {
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleString("pt-BR");
+      dataHoraEl.textContent = `Data/Hora: ${dataFormatada}`;
     }
-    operadorNomeEl.textContent = operadorNome;
-    headerRight.textContent = "Logado: " + operadorNome;
+    setInterval(atualizarDataHora, 1000);
+    atualizarDataHora();
 
-    // Salvar/recuperar seleção local
-    function salvarSelecaoLocal(maquinaId, pecaId) {
-      localStorage.setItem("sel_maquina_id", maquinaId || "");
-      localStorage.setItem("sel_peca_id", pecaId || "");
-    }
-    function lerSelecaoLocal() {
-      return {
-        maquina_id: localStorage.getItem("sel_maquina_id") || "",
-        peca_id: localStorage.getItem("sel_peca_id") || ""
-      };
-    }
-
-    // Carrega listas do Supabase
+    // --- Carrega máquinas e peças ---
     async function carregarListas() {
-      // máquinas: id, nome, descricao
-      const { data: maquinas, error: errM } = await supabase
-        .from("maquinas")
-        .select("id,nome,descricao")
-        .order("nome", { ascending: true });
+      const { data: maquinas } = await supabase.from("maquinas").select("id, nome");
+      const { data: pecas } = await supabase.from("pecas").select("id, nome");
 
-      if (errM) {
-        console.error("Erro carregando máquinas:", errM);
-        selectMaquina.innerHTML = '<option value="">Erro ao carregar</option>';
-      } else {
-        selectMaquina.innerHTML = '<option value="">-- selecione máquina --</option>';
-        maquinas.forEach(m => {
-          const opt = document.createElement("option");
-          opt.value = m.id;
-          opt.textContent = m.nome + (m.descricao ? (" — " + m.descricao) : "");
-          selectMaquina.appendChild(opt);
-        });
-      }
+      maquinas?.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.nome;
+        maquinaSelect.appendChild(opt);
+      });
 
-      // peças: id, codigo, nome
-      const { data: pecas, error: errP } = await supabase
-        .from("pecas")
-        .select("id,codigo,nome")
-        .order("nome", { ascending: true });
-
-      if (errP) {
-        console.error("Erro carregando peças:", errP);
-        selectPeca.innerHTML = '<option value="">Erro ao carregar</option>';
-      } else {
-        selectPeca.innerHTML = '<option value="">-- selecione peça --</option>';
-        pecas.forEach(p => {
-          const opt = document.createElement("option");
-          opt.value = p.id;
-          opt.textContent = (p.codigo ? "["+p.codigo+"] " : "") + p.nome;
-          selectPeca.appendChild(opt);
-        });
-      }
-
-      // aplicar seleção salva (se houver)
-      const sel = lerSelecaoLocal();
-      if (sel.maquina_id) selectMaquina.value = sel.maquina_id;
-      if (sel.peca_id) selectPeca.value = sel.peca_id;
+      pecas?.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.nome;
+        pecaSelect.appendChild(opt);
+      });
     }
+    carregarListas();
 
-    // Atualiza painel (total e últimos registros) filtrando por operador+máquina+peca
-    async function atualizarPainel() {
-      const maquinaId = selectMaquina.value;
-      const pecaId = selectPeca.value;
+    // --- Atualiza contagem da produção em tempo real ---
+    async function atualizarContagem() {
+      if (!maquinaAtual || !pecaAtual) return;
 
-      if (!maquinaId || !pecaId) {
-        contadorEl.textContent = "0";
-        ultimoRegistroEl.textContent = "Máquina ou peça não selecionada.";
-        detalhesEl.textContent = "Selecione máquina e peça para ver a produção.";
-        tbody.innerHTML = "";
-        atualizacaoEl.textContent = "Aguardando seleção";
+      const { data, error } = await supabase
+        .from("producao")
+        .select("quantidade")
+        .eq("operador", operador)
+        .eq("maquina", maquinaAtual)
+        .eq("peca", pecaAtual)
+        .order("data_hora", { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error("Erro ao consultar produção:", error);
         return;
       }
 
-      atualizacaoEl.textContent = "Atualizando...";
-
-      try {
-        // buscar últimos registros (maiores data_hora) do operador filtrando por máquina e peça
-        const { data: ultimos, error: errLast } = await supabase
-          .from("producao")
-          .select("id,operador_id,maquina,peca,quantidade,data_hora")
-          .eq("operador_id", operadorId)
-          .eq("maquina", maquinaId)   // assumimos que Arduino grava 'maquina' como id da máquina
-          .eq("peca", pecaId)         // e 'peca' como id da peça
-          .order("data_hora", { ascending: false })
-          .limit(10);
-
-        if (errLast) throw errLast;
-
-        // Preencher tabela de últimos registros
-        tbody.innerHTML = "";
-        if (ultimos && ultimos.length) {
-          ultimos.forEach(r => {
-            const tr = document.createElement("tr");
-            const dt = new Date(r.data_hora).toLocaleString("pt-BR");
-            tr.innerHTML = `<td>${dt}</td><td>${mostrarNomeMaquina(r.maquina)}</td><td>${mostrarNomePeca(r.peca)}</td><td>${r.quantidade}</td>`;
-            tbody.appendChild(tr);
-          });
-
-          const rec = ultimos[0];
-          ultimoRegistroEl.textContent = `${new Date(rec.data_hora).toLocaleString("pt-BR")} — ${mostrarNomeMaquina(rec.maquina)} / ${mostrarNomePeca(rec.peca)} (qtd ${rec.quantidade})`;
-        } else {
-          ultimoRegistroEl.textContent = "Nenhum registro encontrado para esta combinação.";
-        }
-
-        // Somar total (quantidade) para essa combinação
-        const { data: allQty, error: errQty } = await supabase
-          .from("producao")
-          .select("quantidade")
-          .eq("operador_id", operadorId)
-          .eq("maquina", maquinaId)
-          .eq("peca", pecaId);
-
-        if (errQty) throw errQty;
-
-        const total = (allQty || []).reduce((s, it) => s + (it.quantidade || 0), 0);
-        contadorEl.textContent = total;
-        detalhesEl.textContent = `Operador: ${operadorNome} • Máquina: ${mostrarNomeMaquina(maquinaId)} • Peça: ${mostrarNomePeca(pecaId)}`;
-
-        atualizacaoEl.textContent = "Atualizado às " + new Date().toLocaleTimeString("pt-BR");
-      } catch (err) {
-        console.error("Erro ao atualizar painel:", err);
-        atualizacaoEl.textContent = "Erro ao buscar dados";
-      }
+      const qtd = data && data.length > 0 ? data[0].quantidade : 0;
+      contadorEl.textContent = qtd;
+      atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleString("pt-BR")}`;
     }
 
-    // Helpers: mostrar nome legível da máquina/peça a partir do id selecionado
-    function mostrarNomeMaquina(maquinaId) {
-      const opt = selectMaquina.querySelector(`option[value="${maquinaId}"]`);
-      return opt ? opt.textContent : maquinaId;
-    }
-    function mostrarNomePeca(pecaId) {
-      const opt = selectPeca.querySelector(`option[value="${pecaId}"]`);
-      return opt ? opt.textContent : pecaId;
-    }
+    setInterval(atualizarContagem, 5000); // atualiza a cada 5s
 
-    // Event handlers
-    btnSalvar.addEventListener("click", () => {
-      const mid = selectMaquina.value;
-      const pid = selectPeca.value;
-      if (!mid || !pid) { alert("Escolha máquina e peça antes de salvar."); return; }
-      salvarSelecaoLocal(mid, pid);
-      alert("Seleção salva localmente.");
-      atualizarPainel();
+    // --- Selecionar máquina e peça ---
+    maquinaSelect.addEventListener("change", () => {
+      maquinaAtual = maquinaSelect.value;
+      atualizarContagem();
     });
 
-    btnSair.addEventListener("click", () => {
-      localStorage.removeItem("operador_nome");
-      localStorage.removeItem("operador_id");
-      // manter seleção local? removemos também se preferir: localStorage.removeItem("sel_maquina_id"); localStorage.removeItem("sel_peca_id");
+    pecaSelect.addEventListener("change", () => {
+      pecaAtual = pecaSelect.value;
+      atualizarContagem();
+    });
+
+    // --- Iniciar nova produção ---
+    document.getElementById("novaProducao").addEventListener("click", () => {
+      maquinaSelect.value = "";
+      pecaSelect.value = "";
+      maquinaAtual = "";
+      pecaAtual = "";
+      contadorEl.textContent = "0";
+      atualizadoEl.textContent = "";
+    });
+
+    // --- Botão sair ---
+    document.getElementById("sair").addEventListener("click", () => {
+      localStorage.removeItem("operador");
       window.location.href = "index.html";
     });
-
-    // Atualizar automaticamente a cada 5s
-    let intervalo = null;
-    function iniciarAutoRefresh() {
-      if (intervalo) clearInterval(intervalo);
-      intervalo = setInterval(() => { atualizarPainel(); }, 5000);
-    }
-
-    // inicialização
-    (async function init() {
-      await carregarListas();
-      // se seleção local existir, já atualiza o painel
-      const sel = lerSelecaoLocal();
-      if (sel.maquina_id && sel.peca_id) {
-        selectMaquina.value = sel.maquina_id;
-        selectPeca.value = sel.peca_id;
-      }
-      await atualizarPainel();
-      iniciarAutoRefresh();
-    })();
-
-    // Também atualizar quando o usuário muda a seleção (aplica imediatamente, sem salvar)
-    selectMaquina.addEventListener("change", () => { atualizarPainel(); });
-    selectPeca.addEventListener("change", () => { atualizarPainel(); });
-
-    // Polyfill/compat (em alguns ambientes o nome global pode ser supabase ou supabaseJs)
-    function safeLog() { /* placeholder */ }
-
-  })();
   </script>
 </body>
 </html>
