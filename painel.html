@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Produção CNC</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Produção - CNC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,187 +16,189 @@
       align-items: center;
       min-height: 100vh;
     }
+
     header {
-      background-color: #1e293b;
       width: 100%;
+      background-color: #1e293b;
       padding: 15px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
-    h1 {
-      color: #38bdf8;
+
+    header h1 {
       margin: 0;
-      font-size: 22px;
+      color: #38bdf8;
+      font-size: 20px;
     }
-    #operador {
+
+    #operadorNome {
       font-weight: bold;
       color: #fbbf24;
     }
+
+    main {
+      flex: 1;
+      width: 90%;
+      max-width: 900px;
+      margin-top: 30px;
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    h2 {
+      color: #38bdf8;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
     button {
       background-color: #38bdf8;
-      color: white;
       border: none;
-      padding: 8px 14px;
       border-radius: 6px;
+      padding: 8px 12px;
+      color: white;
+      font-size: 14px;
       cursor: pointer;
     }
+
     button:hover {
       background-color: #0284c7;
     }
-    main {
-      margin-top: 40px;
-      width: 90%;
-      max-width: 800px;
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.3);
-    }
-    h2 {
-      text-align: center;
-      color: #38bdf8;
-    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      text-align: center;
     }
+
     th, td {
-      border: 1px solid #38bdf8;
-      padding: 8px;
-      text-align: center;
+      padding: 10px;
+      border-bottom: 1px solid #475569;
     }
+
     th {
-      background-color: #1e293b;
+      color: #38bdf8;
     }
-    input {
-      padding: 8px;
+
+    #sairBtn {
+      background-color: #f87171;
+      padding: 8px 12px;
       border-radius: 6px;
-      border: none;
-      width: 100%;
     }
-    #mensagem {
-      text-align: center;
-      margin-top: 10px;
-      color: #fbbf24;
+
+    #sairBtn:hover {
+      background-color: #dc2626;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Painel de Produção CNC</h1>
-    <div>
-      Operador: <span id="operador"></span>
-      <button id="sairBtn">Sair</button>
-    </div>
+    <h1>Produção CNC - Operador: <span id="operadorNome"></span></h1>
+    <button id="sairBtn">Sair</button>
   </header>
 
   <main>
     <h2>Registro de Peças Produzidas</h2>
-
-    <div style="display:flex; gap:10px; margin-bottom:15px;">
-      <input type="text" id="peca" placeholder="Nome da peça">
-      <input type="number" id="quantidade" placeholder="Quantidade">
-      <button id="adicionarBtn">Adicionar</button>
-    </div>
+    <form id="formPeca">
+      <input type="text" id="nomePeca" placeholder="Nome da peça" required />
+      <input type="number" id="quantidade" placeholder="Quantidade" required min="1" />
+      <button type="submit">Adicionar</button>
+    </form>
 
     <table id="tabelaPecas">
       <thead>
         <tr>
+          <th>Data/Hora</th>
           <th>Peça</th>
           <th>Quantidade</th>
-          <th>Data/Hora</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
-
-    <div id="mensagem"></div>
   </main>
 
-  <!-- Biblioteca do Supabase -->
+  <!-- 🔗 Conexão com Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
   <script>
-    // Conexão com o Supabase
+    // Substitua pelos seus dados reais do Supabase:
     const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
     const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+    // Verifica operador logado
     const operadorNome = localStorage.getItem("operador_nome");
     const operadorId = localStorage.getItem("operador_id");
 
-    const operadorSpan = document.getElementById("operador");
-    const tabela = document.querySelector("#tabelaPecas tbody");
-    const mensagem = document.getElementById("mensagem");
-
-    // Se não estiver logado, volta pro login
     if (!operadorNome || !operadorId) {
       window.location.href = "index.html";
-    } else {
-      operadorSpan.textContent = operadorNome;
     }
 
+    document.getElementById("operadorNome").textContent = operadorNome;
+
+    // Botão de sair
     document.getElementById("sairBtn").addEventListener("click", () => {
       localStorage.clear();
       window.location.href = "index.html";
     });
 
-    document.getElementById("adicionarBtn").addEventListener("click", async () => {
-      const peca = document.getElementById("peca").value.trim();
+    // Adiciona e salva peça
+    const form = document.getElementById("formPeca");
+    const tabela = document.querySelector("#tabelaPecas tbody");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nomePeca = document.getElementById("nomePeca").value.trim();
       const quantidade = parseInt(document.getElementById("quantidade").value);
       const dataHora = new Date().toLocaleString("pt-BR");
 
-      if (!peca || !quantidade) {
-        mensagem.textContent = "Preencha o nome da peça e a quantidade.";
-        return;
-      }
+      if (!nomePeca || quantidade <= 0) return;
 
-      // Inserir no banco de dados Supabase
+      // Exibe na tabela
+      const novaLinha = document.createElement("tr");
+      novaLinha.innerHTML = `
+        <td>${dataHora}</td>
+        <td>${nomePeca}</td>
+        <td>${quantidade}</td>
+      `;
+      tabela.appendChild(novaLinha);
+      form.reset();
+
+      // Salva no Supabase
       const { error } = await supabaseClient
         .from("producao")
-        .insert([{ operador_id: operadorId, peca, quantidade, data_hora: dataHora }]);
+        .insert([
+          {
+            operador_id: operadorId,
+            peca: nomePeca,
+            quantidade: quantidade,
+            data_hora: dataHora
+          }
+        ]);
 
       if (error) {
-        console.error(error);
-        mensagem.textContent = "Erro ao registrar peça.";
-      } else {
-        mensagem.textContent = "Peça registrada com sucesso!";
-        adicionarNaTabela(peca, quantidade, dataHora);
-        document.getElementById("peca").value = "";
-        document.getElementById("quantidade").value = "";
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao salvar no banco de dados.");
       }
-    });
-
-    function adicionarNaTabela(peca, quantidade, dataHora) {
-      const linha = document.createElement("tr");
-      linha.innerHTML = `
-        <td>${peca}</td>
-        <td>${quantidade}</td>
-        <td>${dataHora}</td>
-      `;
-      tabela.prepend(linha);
-    }
-
-    // Carregar registros já existentes do operador
-    window.addEventListener("DOMContentLoaded", async () => {
-      const { data, error } = await supabaseClient
-        .from("producao")
-        .select("*")
-        .eq("operador_id", operadorId)
-        .order("data_hora", { ascending: false });
-
-      if (error) {
-        console.error(error);
-        mensagem.textContent = "Erro ao carregar dados.";
-        return;
-      }
-
-      data.forEach(item => adicionarNaTabela(item.peca, item.quantidade, item.data_hora));
     });
   </script>
 </body>
 </html>
-
