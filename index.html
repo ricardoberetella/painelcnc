@@ -2,10 +2,131 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Painel de Produção</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Produção CNC</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    h1 {
+      color: #38bdf8;
+    }
+    .container {
+      background-color: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 12px;
+      width: 350px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #38bdf8;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0284c7;
+    }
+    #mensagem {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Bem-vindo ao Painel de Produção CNC!</h1>
-  <p>Login realizado com sucesso.</p>
+  <h1>Painel de Produção CNC</h1>
+  <div class="container">
+    <p id="operadorLogado">Operador: </p>
+
+    <label for="maquina">Máquina:</label>
+    <select id="maquina">
+      <option value="">Selecione a máquina</option>
+      <option value="Torno1">Torno 1</option>
+      <option value="Torno2">Torno 2</option>
+      <option value="Fresa1">Fresa 1</option>
+    </select>
+
+    <label for="peca">Peça:</label>
+    <select id="peca">
+      <option value="">Selecione a peça</option>
+      <option value="PE001">PE001 - Parafuso</option>
+      <option value="PE002">PE002 - Engrenagem</option>
+      <option value="PE003">PE003 - Eixo</option>
+    </select>
+
+    <button id="iniciarBtn">Iniciar Produção</button>
+    <div id="mensagem"></div>
+  </div>
+
+  <!-- Biblioteca Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <script>
+    // 🔗 Substitua pelos seus dados do Supabase
+    const supabaseUrl = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    // Mostrar operador logado
+    const operadorNome = localStorage.getItem("operador_nome") || "Desconhecido";
+    const operadorId = localStorage.getItem("operador_id") || null;
+    document.getElementById("operadorLogado").textContent = `Operador: ${operadorNome}`;
+
+    const btnIniciar = document.getElementById("iniciarBtn");
+    const mensagem = document.getElementById("mensagem");
+
+    btnIniciar.addEventListener("click", async () => {
+      const maquina = document.getElementById("maquina").value;
+      const peca = document.getElementById("peca").value;
+
+      if (!maquina || !peca) {
+        mensagem.style.color = "#f87171";
+        mensagem.textContent = "Selecione máquina e peça!";
+        return;
+      }
+
+      mensagem.style.color = "#fbbf24";
+      mensagem.textContent = "Registrando produção...";
+
+      try {
+        const { data, error } = await supabase
+          .from("producao")
+          .insert([{
+            operador_id: operadorId,
+            operador_nome: operadorNome,
+            maquina: maquina,
+            peca_codigo: peca,
+            data_hora: new Date().toISOString()
+          }]);
+
+        if (error) {
+          console.error(error);
+          mensagem.style.color = "#f87171";
+          mensagem.textContent = "Erro ao registrar produção!";
+          return;
+        }
+
+        mensagem.style.color = "#4ade80";
+        mensagem.textContent = "Produção registrada com sucesso!";
+      } catch (err) {
+        console.error(err);
+        mensagem.style.color = "#f87171";
+        mensagem.textContent = "Erro inesperado!";
+      }
+    });
+  </script>
 </body>
 </html>
