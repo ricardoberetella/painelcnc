@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login do Operador - Produção CNC</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      margin-bottom: 30px;
+      color: #38bdf8;
+    }
+    .login-container {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 12px;
+      width: 320px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #38bdf8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #0284c7;
+    }
+    #mensagem {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <h1>Controle de Produção CNC</h1>
+  <div class="login-container">
+    <input id="codigo" placeholder="Código do operador (ex: OP001)" />
+    <input id="senha" type="password" placeholder="Senha" />
+    <button id="entrarBtn">Entrar</button>
+    <div id="mensagem"></div>
+  </div>
+
+  <!--1️⃣ Biblioteca oficial do Supabase -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- 2️⃣ Seu código JavaScript -->
+  <script>
+    // 🔗 Substitua pelos seus dados reais do Supabase
+    const supabaseUrl = "https://COLOQUE_AQUI_SUA_URL.supabase.co";
+    const supabaseKey = "COLOQUE_AQUI_SUA_ANON_KEY";
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    const btnEntrar = document.getElementById("entrarBtn");
+    const msg = document.getElementById("mensagem");
+
+    btnEntrar.addEventListener("click", async () => {
+      const codigo = document.getElementById("codigo").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      msg.textContent = "";
+
+      if (!codigo || !senha) {
+        msg.textContent = "Por favor, preencha código e senha.";
+        return;
+      }
+
+      msg.textContent = "Verificando...";
+
+      try {
+        const { data, error } = await supabaseClient
+          .from("operadores")
+          .select("*")
+          .eq("codigo", codigo)
+          .eq("senha", senha);
+
+        if (error) {
+          msg.textContent = "Erro de conexão com o banco.";
+          console.error(error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const operador = data[0];
+          msg.style.color = "#4ade80";
+          msg.textContent = "Bem-vindo, " + operador.nome + "!";
+          // Armazena o operador logado e redireciona
+          localStorage.setItem("operador_nome", operador.nome);
+          localStorage.setItem("operador_id", operador.id);
+          setTimeout(() => {
+            window.location.href = "painel.html"; // próxima página
+          }, 1000);
+        } else {
+          msg.style.color = "#f87171";
+          msg.textContent = "Código ou senha incorretos.";
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "Erro inesperado ao fazer login.";
+      }
+    });
+  </script>
+</body>
+</html>
