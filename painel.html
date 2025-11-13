@@ -1,174 +1,111 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Painel de Produção CNC</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #1e293b;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    h2 {
-      color: #38bdf8;
-      margin-bottom: 20px;
-    }
-    select, button {
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 10px;
-      border: none;
-      font-size: 16px;
-    }
-    button {
-      cursor: pointer;
-      background-color: #38bdf8;
-      color: #fff;
-      transition: background-color 0.3s;
-    }
-    button:hover {
-      background-color: #0ea5e9;
-    }
-    #contador {
-      font-size: 60px;
-      font-weight: bold;
-      color: #22c55e;
-      margin: 15px 0;
-    }
-    #atualizado {
-      color: #facc15;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-  <h2 id="operador"></h2>
+<script>
+  // --- Configuração do Supabase ---
+  const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co"; // ⬅️ Substitua
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"; // ⬅️ Substitua
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <label for="maquina">Máquina:</label>
-  <select id="maquina">
-    <option value="">Selecione a máquina</option>
-  </select>
+  // --- Dados do operador logado ---
+  const operador = localStorage.getItem("operador_nome");
+  if (!operador) {
+    window.location.href = "index.html"; // Se não houver operador, volta para o login
+  } else {
+    document.getElementById("operador").textContent = `Operador: ${operador}`;
+  }
 
-  <label for="peca">Peça:</label>
-  <select id="peca">
-    <option value="">Selecione a peça</option>
-  </select>
+  const maquinaSelect = document.getElementById("maquina");
+  const pecaSelect = document.getElementById("peca");
+  const contadorEl = document.getElementById("contador");
+  const atualizadoEl = document.getElementById("atualizado");
+  const dataHoraEl = document.getElementById("dataHora");
 
-  <p id="dataHora"></p>
-  <div id="contador">0</div>
-  <p id="atualizado"></p>
+  let maquinaAtual = "";
+  let pecaAtual = "";
 
-  <button id="novaProducao">🔁 Iniciar nova produção</button>
-  <button id="sair">Sair</button>
+  // --- Atualiza data/hora ---
+  function atualizarDataHora() {
+    const agora = new Date();
+    dataHoraEl.textContent = `Data/Hora: ${agora.toLocaleString("pt-BR")}`;
+  }
+  setInterval(atualizarDataHora, 1000);
+  atualizarDataHora();
 
-  <script>
-    // --- Configuração do Supabase ---
-    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co"; // ⬅️ Substitua
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"; // ⬅️ Substitua
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // --- Carrega máquinas e peças (ordenadas corretamente) ---
+  async function carregarListas() {
+    const { data: maquinas } = await supabase
+      .from("maquinas")
+      .select("id, nome")
+      .order("id", { ascending: true });
 
-    // --- Dados do operador logado ---
-    const operador = localStorage.getItem("operador");
-    document.getElementById("operador").textContent = `Operador: ${operador || "Desconhecido"}`;
+    const { data: pecas } = await supabase
+      .from("pecas")
+      .select("id, nome")
+      .order("id", { ascending: true });
 
-    const maquinaSelect = document.getElementById("maquina");
-    const pecaSelect = document.getElementById("peca");
-    const contadorEl = document.getElementById("contador");
-    const atualizadoEl = document.getElementById("atualizado");
-    const dataHoraEl = document.getElementById("dataHora");
-
-    let maquinaAtual = "";
-    let pecaAtual = "";
-
-    // --- Atualiza data/hora ---
-    function atualizarDataHora() {
-      const agora = new Date();
-      const dataFormatada = agora.toLocaleString("pt-BR");
-      dataHoraEl.textContent = `Data/Hora: ${dataFormatada}`;
-    }
-    setInterval(atualizarDataHora, 1000);
-    atualizarDataHora();
-
-    // --- Carrega máquinas e peças ---
-    async function carregarListas() {
-      const { data: maquinas } = await supabase.from("maquinas").select("id, nome");
-      const { data: pecas } = await supabase.from("pecas").select("id, nome");
-
-      maquinas?.forEach(m => {
-        const opt = document.createElement("option");
-        opt.value = m.id;
-        opt.textContent = m.nome;
-        maquinaSelect.appendChild(opt);
-      });
-
-      pecas?.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.nome;
-        pecaSelect.appendChild(opt);
-      });
-    }
-    carregarListas();
-
-    // --- Atualiza contagem da produção em tempo real ---
-    async function atualizarContagem() {
-      if (!maquinaAtual || !pecaAtual) return;
-
-      const { data, error } = await supabase
-        .from("producao")
-        .select("quantidade")
-        .eq("operador", operador)
-        .eq("maquina", maquinaAtual)
-        .eq("peca", pecaAtual)
-        .order("data_hora", { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error("Erro ao consultar produção:", error);
-        return;
-      }
-
-      const qtd = data && data.length > 0 ? data[0].quantidade : 0;
-      contadorEl.textContent = qtd;
-      atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleString("pt-BR")}`;
-    }
-
-    setInterval(atualizarContagem, 5000); // atualiza a cada 5s
-
-    // --- Selecionar máquina e peça ---
-    maquinaSelect.addEventListener("change", () => {
-      maquinaAtual = maquinaSelect.value;
-      atualizarContagem();
+    maquinas?.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = m.nome;
+      maquinaSelect.appendChild(opt);
     });
 
-    pecaSelect.addEventListener("change", () => {
-      pecaAtual = pecaSelect.value;
-      atualizarContagem();
+    pecas?.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.nome;
+      pecaSelect.appendChild(opt);
     });
+  }
+  carregarListas();
 
-    // --- Iniciar nova produção ---
-    document.getElementById("novaProducao").addEventListener("click", () => {
-      maquinaSelect.value = "";
-      pecaSelect.value = "";
-      maquinaAtual = "";
-      pecaAtual = "";
-      contadorEl.textContent = "0";
-      atualizadoEl.textContent = "";
-    });
+  // --- Atualiza contagem da produção em tempo real ---
+  async function atualizarContagem() {
+    if (!maquinaAtual || !pecaAtual) return;
 
-    // --- Botão sair ---
-    document.getElementById("sair").addEventListener("click", () => {
-      localStorage.removeItem("operador");
-      window.location.href = "index.html";
-    });
-  </script>
-</body>
-</html>
+    const { data, error } = await supabase
+      .from("producao")
+      .select("quantidade")
+      .eq("operador", operador)
+      .eq("maquina", maquinaAtual)
+      .eq("peca", pecaAtual)
+      .order("data_hora", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error("Erro ao consultar produção:", error);
+      return;
+    }
+
+    const qtd = data && data.length > 0 ? data[0].quantidade : 0;
+    contadorEl.textContent = qtd;
+    atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleString("pt-BR")}`;
+  }
+
+  setInterval(atualizarContagem, 5000);
+
+  // --- Selecionar máquina e peça ---
+  maquinaSelect.addEventListener("change", () => {
+    maquinaAtual = maquinaSelect.value;
+    atualizarContagem();
+  });
+
+  pecaSelect.addEventListener("change", () => {
+    pecaAtual = pecaSelect.value;
+    atualizarContagem();
+  });
+
+  // --- Iniciar nova produção ---
+  document.getElementById("novaProducao").addEventListener("click", () => {
+    maquinaSelect.value = "";
+    pecaSelect.value = "";
+    maquinaAtual = "";
+    pecaAtual = "";
+    contadorEl.textContent = "0";
+    atualizadoEl.textContent = "";
+  });
+
+  // --- Sair ---
+  document.getElementById("sair").addEventListener("click", () => {
+    localStorage.removeItem("operador_nome");
+    window.location.href = "index.html";
+  });
+</script>
