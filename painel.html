@@ -63,14 +63,14 @@
 
   <div class="painel">
     <label for="maquina">Máquina:</label>
-    <select id="maquina"><option value="">Carregando...</option></select>
+    <select id="maquina"><option value="">Carregando máquinas...</option></select>
 
     <label for="peca">Peça:</label>
-    <select id="peca"><option value="">Carregando...</option></select>
+    <select id="peca"><option value="">Carregando peças...</option></select>
 
     <div class="contador">
       <h3>Produção Atual</h3>
-      <p id="contador">0</p>
+      <p id="contador">Selecione a máquina e a peça</p>
     </div>
 
     <div class="info">
@@ -92,11 +92,8 @@
 
     // Operador logado
     const operador = localStorage.getItem("operador_nome");
-    if (!operador) {
-      window.location.href = "index.html";
-    } else {
-      document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
-    }
+    if (!operador) window.location.href = "index.html";
+    else document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
 
     const maquinaSelect = document.getElementById("maquina");
     const pecaSelect = document.getElementById("peca");
@@ -132,13 +129,17 @@
 
       } catch (err) {
         console.error(err);
+        contadorEl.textContent = "Erro ao carregar listas!";
       }
     }
     carregarListas();
 
     // Atualiza contagem
     async function atualizarContagem() {
-      if (!maquinaAtual || !pecaAtual) return;
+      if (!maquinaAtual || !pecaAtual) {
+        contadorEl.textContent = "Selecione a máquina e a peça";
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -163,7 +164,7 @@
       }
     }
 
-    // Realtime: atualiza contador instantaneamente quando há novo registro
+    // Realtime: atualiza contador instantaneamente
     supabase
       .channel('realtime_producao')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
@@ -191,7 +192,7 @@
       pecaSelect.value = "";
       maquinaAtual = "";
       pecaAtual = "";
-      contadorEl.textContent = "0";
+      contadorEl.textContent = "Selecione a máquina e a peça";
       atualizadoEl.textContent = "";
     });
     document.getElementById("sair").addEventListener("click", () => {
