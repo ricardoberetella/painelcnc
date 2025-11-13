@@ -5,75 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Painel de Produção CNC</title>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
+    html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     header { text-align: center; margin-bottom: 15px; }
     header h1 { color: #38bdf8; margin: 0; font-size: 24px; }
     header h2 { color: #f1f5f9; margin-top: 5px; font-size: 14px; }
-
-    .painel {
-      background-color: rgba(255, 255, 255, 0.08);
-      padding: 15px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      height: 400px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
+    .painel { background-color: rgba(255, 255, 255, 0.08); padding: 15px; border-radius: 12px; width: 90%; max-width: 460px; height: 480px; box-shadow: 0 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; }
     label { display: block; margin-top: 8px; font-weight: bold; font-size: 12px; }
-    select {
-      width: 100%;
-      padding: 6px;
-      border: none;
-      border-radius: 6px;
-      margin-top: 3px;
-      font-size: 12px;
-      color: #0f172a;
-    }
-
+    select { width: 100%; padding: 8px; border-radius: 6px; border: none; margin-top: 4px; font-size: 14px; color: #0f172a; }
     .contador { text-align: center; margin: 15px 0; }
     .contador h3 { color: #38bdf8; margin-bottom: 5px; font-size: 16px; }
-    .contador p { font-size: 32px; color: #fbbf24; font-weight: bold; margin: 0; }
-
-    .info { text-align: center; font-size: 10px; color: #94a3b8; margin-bottom: 5px; }
-
-    button {
-      width: 100%;
-      padding: 6px;
-      margin-top: 5px;
-      background-color: #38bdf8;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-    }
+    .contador p { font-size: 48px; color: #fbbf24; font-weight: bold; margin: 0; }
+    .info { text-align: center; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
+    button { width: 100%; padding: 10px; margin-top: 6px; background-color: #38bdf8; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
     button:hover { background-color: #0284c7; }
-
-    .admin-panel {
-      display: none; /* inicialmente escondido */
-      margin-top: 10px;
-      padding: 10px;
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      font-size: 12px;
-    }
-
-    footer { margin-top: auto; padding: 10px; font-size: 9px; color: #94a3b8; text-align: center; }
+    .admin-panel { display: none; margin-top: 10px; padding: 10px; background-color: rgba(255,255,255,0.06); border-radius: 6px; font-size: 12px; color: #fff; }
+    footer { margin-top: auto; padding: 10px; font-size: 10px; color: #94a3b8; text-align: center; }
   </style>
 </head>
 <body>
@@ -89,7 +35,7 @@
 
       <div class="contador">
         <h3>Produção Atual</h3>
-        <p id="contador">Selecione a peça</p>
+        <p id="contador">—</p>
       </div>
 
       <div class="info">
@@ -100,17 +46,17 @@
       <!-- Painel administrativo -->
       <div id="adminPanel" class="admin-panel">
         <strong>Relatórios Administrativos</strong>
-        <p>Aqui você poderá ver relatórios por máquina, operador, peça e dia.</p>
+        <p>Aqui você poderá ver relatórios por máquina, operador, peça e dia. (Acesse Relatórios se for administrador)</p>
       </div>
     </div>
 
     <div>
-      <button id="novaProducao">Iniciar Nova Produção</button>
+      <button id="novaProducao">Iniciar Nova Produção (criar registro)</button>
       <button id="sair">Sair</button>
     </div>
   </div>
 
-  <footer></footer>
+  <footer>Produção CNC • Painel Operador</footer>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
@@ -119,13 +65,13 @@
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const operador = localStorage.getItem("operador_nome");
-    const perfil = localStorage.getItem("operador_perfil"); // novo item do login
+    const perfil = (localStorage.getItem("operador_perfil") || "").toLowerCase();
 
     if (!operador) window.location.href = "index.html";
     else document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
 
-    // Mostra painel administrativo apenas se for admin
-    if (perfil === "admin") {
+    // Mostra painel administrativo apenas se for administrador
+    if (perfil === "administrador") {
       document.getElementById("adminPanel").style.display = "block";
     }
 
@@ -145,11 +91,14 @@
 
     async function carregarListas() {
       try {
-        const { data: pecas } = await supabase.from("pecas").select("id, nome").order("id");
+        // traz o nome e usa o nome como value para manter consistência com a tabela 'producao.peca'
+        const { data: pecas, error } = await supabase.from("pecas").select("id, nome").order("id");
+        if (error) throw error;
         pecaSelect.innerHTML = '<option value="">Selecione...</option>';
-        pecas.forEach(p => pecaSelect.appendChild(new Option(p.nome, p.id)));
+        pecas.forEach(p => pecaSelect.appendChild(new Option(p.nome, p.nome)));
       } catch (err) {
         console.error(err);
+        pecaSelect.innerHTML = '<option value="">Erro ao carregar peças</option>';
         contadorEl.textContent = "Erro ao carregar peças!";
       }
     }
@@ -158,6 +107,7 @@
     async function atualizarContagem() {
       if (!pecaAtual) {
         contadorEl.textContent = "Selecione a peça";
+        atualizadoEl.textContent = "";
         return;
       }
       try {
@@ -173,9 +123,11 @@
         atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleTimeString("pt-BR")}`;
       } catch (err) {
         console.error(err);
+        contadorEl.textContent = "Erro ao obter contagem";
       }
     }
 
+    // realtime: atualiza quando há novos inserts
     supabase
       .channel('realtime_producao')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
@@ -188,16 +140,33 @@
 
     setInterval(atualizarContagem, 5000);
 
-    pecaSelect.addEventListener("change", () => { 
-      pecaAtual = pecaSelect.value; 
-      atualizarContagem(); 
+    pecaSelect.addEventListener("change", () => {
+      pecaAtual = pecaSelect.value;
+      atualizarContagem();
     });
 
-    document.getElementById("novaProducao").addEventListener("click", () => {
-      pecaSelect.value = "";
-      pecaAtual = "";
-      contadorEl.textContent = "Selecione a peça";
-      atualizadoEl.textContent = "";
+    document.getElementById("novaProducao").addEventListener("click", async () => {
+      if (!pecaAtual) {
+        alert("Selecione uma peça antes de iniciar nova produção.");
+        return;
+      }
+      try {
+        // cria um registro inicial (quantidade 0) para marcar início de produção
+        const { data, error } = await supabase.from("producao").insert([{
+          maquina: "",             // opcional: preencher se desejar
+          operador: operador,
+          peca: pecaAtual,
+          quantidade: 0,
+          data_hora: new Date().toISOString()
+        }]);
+        if (error) throw error;
+        // atualiza visual imediatamente
+        atualizarContagem();
+        alert("Nova produção iniciada (registro criado).");
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao iniciar nova produção.");
+      }
     });
 
     document.getElementById("sair").addEventListener("click", () => {
