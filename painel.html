@@ -27,7 +27,7 @@
       border-radius: 12px;
       width: 90%;
       max-width: 400px;
-      height: 400px; /* altura ajustada */
+      height: 400px;
       box-shadow: 0 0 15px rgba(0,0,0,0.5);
       display: flex;
       flex-direction: column;
@@ -64,6 +64,15 @@
     }
     button:hover { background-color: #0284c7; }
 
+    .admin-panel {
+      display: none; /* inicialmente escondido */
+      margin-top: 10px;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
     footer { margin-top: auto; padding: 10px; font-size: 9px; color: #94a3b8; text-align: center; }
   </style>
 </head>
@@ -87,6 +96,12 @@
         <div id="atualizado"></div>
         <div id="dataHora"></div>
       </div>
+
+      <!-- Painel administrativo -->
+      <div id="adminPanel" class="admin-panel">
+        <strong>Relatórios Administrativos</strong>
+        <p>Aqui você poderá ver relatórios por máquina, operador, peça e dia.</p>
+      </div>
     </div>
 
     <div>
@@ -103,10 +118,16 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Operador logado
     const operador = localStorage.getItem("operador_nome");
+    const perfil = localStorage.getItem("operador_perfil"); // novo item do login
+
     if (!operador) window.location.href = "index.html";
     else document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
+
+    // Mostra painel administrativo apenas se for admin
+    if (perfil === "admin") {
+      document.getElementById("adminPanel").style.display = "block";
+    }
 
     const pecaSelect = document.getElementById("peca");
     const contadorEl = document.getElementById("contador");
@@ -181,6 +202,7 @@
 
     document.getElementById("sair").addEventListener("click", () => {
       localStorage.removeItem("operador_nome");
+      localStorage.removeItem("operador_perfil");
       window.location.href = "index.html";
     });
   </script>
