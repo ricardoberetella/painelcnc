@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios de Produção CNC</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 { color: #38bdf8; margin-top: 20px; font-size: 24px; }
+    .filtros {
+      background-color: rgba(255,255,255,0.08);
+      padding: 15px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      margin-top: 15px;
+    }
+    label { font-size: 12px; display: block; margin-top: 8px; }
+    select, input[type="date"], button {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: none;
+      font-size: 12px;
+    }
+    button {
+      background-color: #38bdf8;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background-color: #0284c7; }
+    table {
+      width: 90%;
+      max-width: 600px;
+      margin-top: 15px;
+      border-collapse: collapse;
+      background-color: rgba(255,255,255,0.08);
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #94a3b8;
+      text-align: center;
+      font-size: 12px;
+    }
+    th { background-color: rgba(56, 189, 248, 0.5); }
+    #sair {
+      margin-top: 15px;
+      padding: 8px 12px;
+      width: 90%;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Relatórios de Produção CNC</h1>
+
+  <div class="filtros">
+    <label for="filtroMaquina">Máquina:</label>
+    <select id="filtroMaquina"><option value="">Todas</option></select>
+
+    <label for="filtroOperador">Operador:</label>
+    <select id="filtroOperador"><option value="">Todos</option></select>
+
+    <label for="filtroPeca">Peça:</label>
+    <select id="filtroPeca"><option value="">Todas</option></select>
+
+    <label for="filtroData">Data:</label>
+    <input type="date" id="filtroData" />
+
+    <button id="filtrar">Filtrar</button>
+  </div>
+
+  <table id="tabelaRelatorios">
+    <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Operador</th>
+        <th>Máquina</th>
+        <th>Peça</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="sair">Sair</button>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const operador = localStorage.getItem("operador_nome");
+    const perfil = localStorage.getItem("operador_perfil");
+
+    if (!operador || perfil !== "admin") {
+      alert("Acesso negado. Apenas administradores.");
+      window.location.href = "index.html";
+    }
+
+    const filtroMaquina = document.getElementById("filtroMaquina");
+    const filtroOperador = document.getElementById("filtroOperador");
+    const filtroPeca = document.getElementById("filtroPeca");
+    const filtroData = document.getElementById("filtroData");
+    const tabela = document.getElementById("tabelaRelatorios").querySelector("tbody");
+
+    async function carregarFiltros() {
+      const { data: maquinas } = await supabase.from("maquinas").select("id,nome").order("id");
+      maquinas.forEach(m => filtroMaquina.appendChild(new Option(m.nome, m.id)));
+
+      const { data: operadores } = await supabase.from("operadores").select("nome").order("nome");
+      operadores.forEach(o => filtroOperador.appendChild(new Option(o.nome, o.nome)));
+
+      const { data: pecas } = await supabase.from("pecas").select("id,nome").order("id");
+      pecas.forEach(p => filtroPeca.appendChild(new Option(p.nome, p.id)));
+    }
+
+    async function filtrarRelatorios() {
+      tabela.innerHTML = "";
+      let query = supabase.from("producao").select("data_hora, operador, maquina, peca, quantidade");
+
+      if (filtroMaquina.value) query = query.eq("maquina", filtroMaquina.value);
+      if (filtroOperador.value) query = query.eq("operador", filtroOperador.value);
+      if (filtroPeca.value) query = query.eq("peca", filtroPeca.value);
+      if (filtroData.value) {
+        const dataInicio = new Date(filtroData.value);
+        const dataFim = new Date(dataInicio);
+        dataFim.setDate(dataFim.getDate() + 1);
+        query = query.gte("data_hora", dataInicio.toISOString()).lt("data_hora", dataFim.toISOString());
+      }
+
+      const { data, error } = await query.order("data_hora", { ascending: false });
+      if (error) return console.error(error);
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${new Date(row.data_hora).toLocaleString("pt-BR")}</td>
+          <td>${row.operador}</td>
+          <td>${row.maquina}</td>
+          <td>${row.peca}</td>
+          <td>${row.quantidade}</td>
+        `;
+        tabela.appendChild(tr);
+      });
+    }
+
+    document.getElementById("filtrar").addEventListener("click", filtrarRelatorios);
+    document.getElementById("sair").addEventListener("click", () => {
+      localStorage.removeItem("operador_nome");
+      localStorage.removeItem("operador_perfil");
+      window.location.href = "index.html";
+    });
+
+    carregarFiltros();
+  </script>
+</body>
+</html>
