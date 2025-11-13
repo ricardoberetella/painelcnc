@@ -52,7 +52,7 @@
     </form>
   </div>
 
-  <!-- Script colocado no final do body -->
+  <!-- Script colocado no final do body para evitar erros de null -->
   <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
@@ -67,21 +67,31 @@
         e.preventDefault();
         mensagemEl.textContent = "Verificando...";
 
-        let nome = document.getElementById("usuario").value.trim().toLowerCase();
-        let senha = document.getElementById("senha").value.trim();
+        // Pega valores digitados e normaliza (remove espaços e ignora maiúsculas/minúsculas)
+        let nomeInput = document.getElementById("usuario").value.trim().toLowerCase();
+        let senhaInput = document.getElementById("senha").value.trim().toLowerCase();
 
         try {
-          // Busca todos os operadores e compara manualmente
+          // Busca todos os operadores
           const { data: operadores, error } = await supabase.from("operadores").select("*");
           if (error) throw error;
 
-          const operador = operadores.find(op => op.nome.trim().toLowerCase() === nome && op.senha.trim() === senha);
+          console.log("Operadores do banco:", operadores);
+
+          // Compara nome e senha ignorando maiúsculas/minúsculas e espaços
+          const operador = operadores.find(op => 
+            op.nome.trim().toLowerCase() === nomeInput &&
+            op.senha.trim().toLowerCase() === senhaInput
+          );
+
+          console.log("Operador encontrado:", operador);
 
           if (!operador) {
             mensagemEl.textContent = "Usuário ou senha incorretos!";
             return;
           }
 
+          // Salva nome no localStorage e redireciona
           localStorage.setItem("operador_nome", operador.nome);
           window.location.href = "painel.html";
 
