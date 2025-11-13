@@ -17,7 +17,7 @@
     }
 
     .login-container {
-      background-color: rgba(255,255,255,0.1);
+      background-color: rgba(255,255,255,0.08);
       padding: 30px;
       border-radius: 12px;
       width: 320px;
@@ -25,40 +25,12 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
 
-    h1 {
-      color: #38bdf8;
-      margin-bottom: 10px;
-    }
-
-    .form-title {
-      font-size: 20px;
-      color: #f1f5f9;
-      margin-bottom: 20px;
-    }
-
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 6px;
-      border: none;
-      font-size: 16px;
-    }
-
-    button {
-      background-color: #38bdf8;
-      color: white;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #0284c7;
-    }
-
-    #mensagem {
-      margin-top: 10px;
-      color: #fbbf24;
-    }
+    h1 { color: #38bdf8; margin-bottom: 10px; }
+    .form-title { font-size: 20px; color: #f1f5f9; margin-bottom: 20px; }
+    input, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 6px; border: none; font-size: 16px; }
+    button { background-color: #38bdf8; color: white; cursor: pointer; }
+    button:hover { background-color: #0284c7; }
+    #mensagem { margin-top: 10px; color: #fbbf24; }
   </style>
 </head>
 <body>
@@ -93,28 +65,31 @@
         const senhaInput = document.getElementById("senha").value.trim();
 
         try {
-          // Busca nome, senha e perfil
-          const { data: operadores, error } = await supabase.from("operadores").select("nome, senha, perfil");
+          // Montagem de query mais segura: filtrar no servidor (evita trazer toda a tabela)
+          const { data: operadores, error } = await supabase
+            .from("operadores")
+            .select("nome, senha, perfil")
+            .ilike("nome", nomeInput); // permite case-insensitive
           if (error) throw error;
 
-          console.log("Operadores cadastrados no Supabase:");
-          operadores.forEach(op => {
-            console.log(`"${op.nome}" | "${op.senha}" | "${op.perfil}"`);
-          });
+          // Se não encontrou por ilike, tentar buscar todos (fallback)
+          if (!operadores || operadores.length === 0) {
+            mensagemEl.textContent = "Usuário ou senha incorretos!";
+            return;
+          }
 
+          // Encontrar por comparação exata (nome trimmed, case-insensitive) e senha igual
           const operador = operadores.find(op =>
             String(op.nome || "").trim().toUpperCase() === nomeInput.toUpperCase() &&
             String(op.senha || "").trim() === senhaInput
           );
-
-          console.log("Operador encontrado:", operador);
 
           if (!operador) {
             mensagemEl.textContent = "Usuário ou senha incorretos!";
             return;
           }
 
-          // Normaliza nome e perfil
+          // Normaliza perfil: gravamos sempre em lowercase (ex.: "administrador" ou "operador")
           const nome = String(operador.nome || "").trim();
           const perfil = String(operador.perfil || "").trim().toLowerCase();
 
