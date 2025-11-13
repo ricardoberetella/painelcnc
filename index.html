@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login do Operador - Produção CNC</title>
   <style>
-    html {
+    html, body {
       height: 100%;
-    }
-    body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #0f172a, #1e293b);
       color: white;
@@ -16,121 +15,68 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
-      margin: 0;
     }
-    h1 {
-      margin-bottom: 0px;
-      color: #38bdf8;
-      line-height: 20px;
-    }
+    h1 { color: #38bdf8; margin-bottom: 10px; }
     .login-container {
       background-color: rgba(255, 255, 255, 0.1);
       padding: 30px;
       border-radius: 12px;
       width: 320px;
       box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      margin-bottom: 100px;
     }
-    input {
+    input, button {
       width: 100%;
       padding: 10px;
-      margin: 10px 0;
+      margin-top: 10px;
       border: none;
       border-radius: 6px;
       font-size: 16px;
     }
     button {
-      width: 100%;
-      padding: 10px;
       background-color: #38bdf8;
       color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
       cursor: pointer;
-      margin-top: 10px;
     }
-    button:hover {
-      background-color: #0284c7;
-    }
-    #mensagem {
-      margin-top: 15px;
-      font-size: 14px;
-      color: #fbbf24;
-    }
+    button:hover { background-color: #0284c7; }
+    #mensagem { color: #fbbf24; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h1>Controle de</h1>
-  <h1>Produção CNC</h1>
-  <br>
-
+  <h1>Controle de Produção CNC</h1>
   <div class="login-container">
-    <input id="codigo" placeholder="Código do operador (ex: OP001)" />
-    <input id="senha" type="password" placeholder="Senha" />
-    <button id="entrarBtn">Entrar</button>
-    <div id="mensagem"></div>
+    <form id="loginForm">
+      <input id="usuario" placeholder="Nome do Operador" required />
+      <input id="senha" type="password" placeholder="Senha" required />
+      <button type="submit">Entrar</button>
+      <div id="mensagem"></div>
+    </form>
   </div>
 
-  <!-- Biblioteca Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
   <script>
-    // --- Configuração Supabase ---
     const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const btnEntrar = document.getElementById("entrarBtn");
-    const msg = document.getElementById("mensagem");
-
-    btnEntrar.addEventListener("click", async () => {
-      const codigo = document.getElementById("codigo").value.trim();
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById("usuario").value.trim();
       const senha = document.getElementById("senha").value.trim();
-      msg.textContent = "";
 
-      if (!codigo || !senha) {
-        msg.textContent = "Por favor, preencha código e senha.";
+      const { data: operador, error } = await supabase
+        .from("operadores")
+        .select("*")
+        .eq("nome", nome)
+        .eq("senha", senha)
+        .single();
+
+      if (error || !operador) {
+        document.getElementById("mensagem").textContent = "Usuário ou senha incorretos!";
         return;
       }
 
-      msg.textContent = "Verificando...";
-
-      try {
-        const { data, error } = await supabase
-          .from("operadores")
-          .select("*")
-          .eq("codigo", codigo)
-          .eq("senha", senha);
-
-        if (error) {
-          msg.textContent = "Erro de conexão com o banco.";
-          console.error(error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const operador = data[0];
-          msg.style.color = "#4ade80";
-          msg.textContent = "Bem-vindo, " + operador.nome + "!";
-
-          // Armazena dados no navegador
-          localStorage.setItem("operador_nome", operador.nome);
-          localStorage.setItem("operador_id", operador.id);
-
-          // Redireciona
-          setTimeout(() => {
-            window.location.href = "painel.html";
-          }, 800);
-        } else {
-          msg.style.color = "#f87171";
-          msg.textContent = "Código ou senha incorretos.";
-        }
-      } catch (err) {
-        console.error(err);
-        msg.textContent = "Erro inesperado ao fazer login.";
-      }
+      localStorage.setItem("operador_nome", operador.nome);
+      window.location.href = "painel.html";
     });
   </script>
 </body>
