@@ -72,8 +72,8 @@
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
       // Substitua pelos seus dados do Supabase
-      const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+      const SUPABASE_URL = "https://SEU_PROJECT_REF.supabase.co";
+      const SUPABASE_ANON_KEY = "SUA_CHAVE_ANON_AQUI";
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const loginForm = document.getElementById("loginForm");
@@ -83,7 +83,7 @@
         e.preventDefault();
         mensagemEl.textContent = "Verificando...";
 
-        const nomeInput = document.getElementById("usuario").value.trim().toLowerCase();
+        const nomeInput = document.getElementById("usuario").value.trim();
         const senhaInput = document.getElementById("senha").value.trim();
 
         try {
@@ -94,9 +94,9 @@
           console.log("Operadores cadastrados no Supabase:");
           operadores.forEach(op => console.log(`"${op.nome}" | "${op.senha}"`));
 
-          // Normaliza nome e senha para comparar
+          // Normaliza o nome para maiúsculas para comparar
           const operador = operadores.find(op =>
-            op.nome.trim().toLowerCase() === nomeInput &&
+            op.nome.trim().toUpperCase() === nomeInput.toUpperCase() &&
             op.senha.trim() === senhaInput
           );
 
