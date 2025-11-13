@@ -14,7 +14,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center; /* centraliza verticalmente */
+      justify-content: center;
     }
 
     header { text-align: center; margin-bottom: 15px; }
@@ -25,23 +25,23 @@
       background-color: rgba(255, 255, 255, 0.08);
       padding: 15px;
       border-radius: 12px;
-      width: 90%;          /* responsivo */
-      max-width: 300px;    /* largura máxima */
-      height: 400px;       /* altura fixa para caber na tela */
+      width: 90%;
+      max-width: 300px;
+      height: 300px; /* altura ajustada */
       box-shadow: 0 0 15px rgba(0,0,0,0.5);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
 
-    label { display: block; margin-top: 8px; font-weight: bold; font-size: 12px; } /* fonte menor */
+    label { display: block; margin-top: 8px; font-weight: bold; font-size: 12px; }
     select {
       width: 100%;
       padding: 6px;
       border: none;
       border-radius: 6px;
       margin-top: 3px;
-      font-size: 12px;  /* fonte menor */
+      font-size: 12px;
       color: #0f172a;
     }
 
@@ -75,15 +75,12 @@
 
   <div class="painel">
     <div>
-      <label for="maquina">Máquina:</label>
-      <select id="maquina"><option value="">Carregando máquinas...</option></select>
-
       <label for="peca">Peça:</label>
       <select id="peca"><option value="">Carregando peças...</option></select>
 
       <div class="contador">
         <h3>Produção Atual</h3>
-        <p id="contador">Selecione a máquina e a peça</p>
+        <p id="contador">Selecione a peça</p>
       </div>
 
       <div class="info">
@@ -111,13 +108,11 @@
     if (!operador) window.location.href = "index.html";
     else document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
 
-    const maquinaSelect = document.getElementById("maquina");
     const pecaSelect = document.getElementById("peca");
     const contadorEl = document.getElementById("contador");
     const atualizadoEl = document.getElementById("atualizado");
     const dataHoraEl = document.getElementById("dataHora");
 
-    let maquinaAtual = "";
     let pecaAtual = "";
 
     function atualizarDataHora() {
@@ -129,24 +124,19 @@
 
     async function carregarListas() {
       try {
-        const { data: maquinas } = await supabase.from("maquinas").select("id, nome").order("id");
         const { data: pecas } = await supabase.from("pecas").select("id, nome").order("id");
-
-        maquinaSelect.innerHTML = '<option value="">Selecione...</option>';
         pecaSelect.innerHTML = '<option value="">Selecione...</option>';
-
-        maquinas.forEach(m => maquinaSelect.appendChild(new Option(m.nome, m.id)));
         pecas.forEach(p => pecaSelect.appendChild(new Option(p.nome, p.id)));
       } catch (err) {
         console.error(err);
-        contadorEl.textContent = "Erro ao carregar listas!";
+        contadorEl.textContent = "Erro ao carregar peças!";
       }
     }
     carregarListas();
 
     async function atualizarContagem() {
-      if (!maquinaAtual || !pecaAtual) {
-        contadorEl.textContent = "Selecione a máquina e a peça";
+      if (!pecaAtual) {
+        contadorEl.textContent = "Selecione a peça";
         return;
       }
       try {
@@ -154,7 +144,6 @@
           .from("producao")
           .select("quantidade")
           .eq("operador", operador)
-          .eq("maquina", maquinaAtual)
           .eq("peca", pecaAtual)
           .order("data_hora", { ascending: false })
           .limit(1);
@@ -170,7 +159,7 @@
       .channel('realtime_producao')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
         const novo = payload.new;
-        if (novo.maquina == maquinaAtual && novo.peca == pecaAtual && novo.operador == operador) {
+        if (novo.peca == pecaAtual && novo.operador == operador) {
           atualizarContagem();
         }
       })
@@ -178,21 +167,15 @@
 
     setInterval(atualizarContagem, 5000);
 
-    maquinaSelect.addEventListener("change", () => { 
-      maquinaAtual = maquinaSelect.value; 
-      atualizarContagem(); 
-    });
     pecaSelect.addEventListener("change", () => { 
       pecaAtual = pecaSelect.value; 
       atualizarContagem(); 
     });
 
     document.getElementById("novaProducao").addEventListener("click", () => {
-      maquinaSelect.value = "";
       pecaSelect.value = "";
-      maquinaAtual = "";
       pecaAtual = "";
-      contadorEl.textContent = "Selecione a máquina e a peça";
+      contadorEl.textContent = "Selecione a peça";
       atualizadoEl.textContent = "";
     });
 
