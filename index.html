@@ -31,6 +31,7 @@
       border: none;
       border-radius: 6px;
       font-size: 16px;
+      box-sizing: border-box;
     }
     button {
       background-color: #38bdf8;
@@ -58,25 +59,36 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    const loginForm = document.getElementById("loginForm");
+    const mensagemEl = document.getElementById("mensagem");
+
+    loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      mensagemEl.textContent = "Verificando...";
+      
       const nome = document.getElementById("usuario").value.trim();
       const senha = document.getElementById("senha").value.trim();
 
-      const { data: operador, error } = await supabase
-        .from("operadores")
-        .select("*")
-        .eq("nome", nome)
-        .eq("senha", senha)
-        .single();
+      try {
+        const { data: operador, error } = await supabase
+          .from("operadores")
+          .select("*")
+          .eq("nome", nome)
+          .eq("senha", senha)
+          .single();
 
-      if (error || !operador) {
-        document.getElementById("mensagem").textContent = "Usuário ou senha incorretos!";
-        return;
+        if (error || !operador) {
+          mensagemEl.textContent = "Usuário ou senha incorretos!";
+          return;
+        }
+
+        localStorage.setItem("operador_nome", operador.nome);
+        window.location.href = "painel.html";
+
+      } catch (err) {
+        console.error(err);
+        mensagemEl.textContent = "Erro de conexão com o servidor!";
       }
-
-      localStorage.setItem("operador_nome", operador.nome);
-      window.location.href = "painel.html";
     });
   </script>
 </body>
