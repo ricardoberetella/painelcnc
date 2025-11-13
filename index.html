@@ -52,7 +52,7 @@
     </form>
   </div>
 
-  <!-- Script colocado no final do body para evitar erros de null -->
+  <!-- Script no final do body para garantir que o DOM já carregou -->
   <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
@@ -67,9 +67,9 @@
         e.preventDefault();
         mensagemEl.textContent = "Verificando...";
 
-        // Pega valores digitados e normaliza (remove espaços e ignora maiúsculas/minúsculas)
+        // Pega valores digitados
         let nomeInput = document.getElementById("usuario").value.trim().toLowerCase();
-        let senhaInput = document.getElementById("senha").value.trim().toLowerCase();
+        let senhaInput = document.getElementById("senha").value.trim();
 
         try {
           // Busca todos os operadores
@@ -78,10 +78,11 @@
 
           console.log("Operadores do banco:", operadores);
 
-          // Compara nome e senha ignorando maiúsculas/minúsculas e espaços
+          // Compara nome ignorando maiúsculas/minúsculas e espaços
+          // Senha mantém sensibilidade, mas remove espaços extras
           const operador = operadores.find(op => 
             op.nome.trim().toLowerCase() === nomeInput &&
-            op.senha.trim().toLowerCase() === senhaInput
+            op.senha.trim() === senhaInput
           );
 
           console.log("Operador encontrado:", operador);
@@ -91,7 +92,7 @@
             return;
           }
 
-          // Salva nome no localStorage e redireciona
+          // Salva operador no localStorage e redireciona
           localStorage.setItem("operador_nome", operador.nome);
           window.location.href = "painel.html";
 
