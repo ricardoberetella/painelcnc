@@ -71,7 +71,7 @@
 
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
-      // Configuração do Supabase
+      // Substitua pelos seus dados do Supabase
       const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -87,16 +87,14 @@
         const senhaInput = document.getElementById("senha").value.trim();
 
         try {
-          // Busca operadores no Supabase
-          const { data: operadores, error } = await supabase
-            .from("operadores")
-            .select("nome, senha");
-
+          // Busca todos os operadores
+          const { data: operadores, error } = await supabase.from("operadores").select("nome, senha");
           if (error) throw error;
 
-          console.log("Operadores cadastrados:", operadores);
+          console.log("Operadores cadastrados no Supabase:");
+          operadores.forEach(op => console.log(`"${op.nome}" | "${op.senha}"`));
 
-          // Valida login
+          // Normaliza nome e senha para comparar
           const operador = operadores.find(op =>
             op.nome.trim().toLowerCase() === nomeInput &&
             op.senha.trim() === senhaInput
@@ -114,12 +112,11 @@
           window.location.href = "painel.html";
 
         } catch (err) {
-          console.error(err);
-          mensagemEl.textContent = "Erro ao conectar com o servidor!";
+          console.error("Erro ao conectar com Supabase:", err);
+          mensagemEl.textContent = "Erro de conexão com o servidor!";
         }
       });
     });
   </script>
 </body>
 </html>
-
