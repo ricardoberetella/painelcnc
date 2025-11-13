@@ -71,7 +71,6 @@
 
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
-      // Substitua pelos seus dados do Supabase
       const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
       const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -87,17 +86,20 @@
         const senhaInput = document.getElementById("senha").value.trim();
 
         try {
-          // Busca todos os operadores
           const { data: operadores, error } = await supabase.from("operadores").select("nome, senha");
           if (error) throw error;
 
           console.log("Operadores cadastrados no Supabase:");
-          operadores.forEach(op => console.log(`"${op.nome}" | "${op.senha}"`));
+          operadores.forEach(op => {
+            const nomeStr = String(op.nome || "");
+            const senhaStr = String(op.senha || "");
+            console.log(`"${nomeStr}" (${typeof nomeStr}, ${nomeStr.length}) | "${senhaStr}" (${typeof senhaStr}, ${senhaStr.length})`);
+          });
 
-          // Normaliza o nome para maiúsculas para comparar
+          // Comparação segura: transforma em string antes de normalizar
           const operador = operadores.find(op =>
-            op.nome.trim().toUpperCase() === nomeInput.toUpperCase() &&
-            op.senha.trim() === senhaInput
+            String(op.nome || "").trim().toUpperCase() === nomeInput.toUpperCase() &&
+            String(op.senha || "").trim() === senhaInput
           );
 
           console.log("Operador encontrado:", operador);
@@ -107,7 +109,6 @@
             return;
           }
 
-          // Salva operador no localStorage e redireciona
           localStorage.setItem("operador_nome", operador.nome);
           window.location.href = "painel.html";
 
@@ -120,4 +121,3 @@
   </script>
 </body>
 </html>
-
