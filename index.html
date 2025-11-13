@@ -114,11 +114,16 @@
             return;
           }
 
-          localStorage.setItem("operador_nome", operador.nome);
-          localStorage.setItem("operador_perfil", operador.perfil);
+          // Normaliza nome e perfil
+          const nome = String(operador.nome || "").trim();
+          const perfil = String(operador.perfil || "").trim().toLowerCase();
+
+          // Salva no localStorage
+          localStorage.setItem("operador_nome", nome);
+          localStorage.setItem("operador_perfil", perfil);
 
           // Redireciona de acordo com o perfil
-          if (operador.perfil.toLowerCase() === "administrador") {
+          if (perfil === "administrador") {
             window.location.href = "relatorios.html";
           } else {
             window.location.href = "painel.html";
