@@ -27,7 +27,13 @@
 
     h1 {
       color: #38bdf8;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
+    }
+
+    .form-title {
+      font-size: 20px;
+      color: #f1f5f9;
+      margin-bottom: 20px;
     }
 
     input, button {
@@ -57,6 +63,7 @@
 </head>
 <body>
   <div class="login-container">
+    <div class="form-title">Controle de Produção</div>
     <h1>Login do Operador</h1>
     <form id="loginForm">
       <input id="usuario" placeholder="Nome do Operador" required />
@@ -96,7 +103,6 @@
             console.log(`"${nomeStr}" (${typeof nomeStr}, ${nomeStr.length}) | "${senhaStr}" (${typeof senhaStr}, ${senhaStr.length})`);
           });
 
-          // Comparação segura: transforma em string antes de normalizar
           const operador = operadores.find(op =>
             String(op.nome || "").trim().toUpperCase() === nomeInput.toUpperCase() &&
             String(op.senha || "").trim() === senhaInput
@@ -121,5 +127,3 @@
   </script>
 </body>
 </html>
-
-
