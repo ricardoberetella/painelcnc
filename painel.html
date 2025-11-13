@@ -15,11 +15,9 @@
       flex-direction: column;
       align-items: center;
     }
-
     header { text-align: center; margin-top: 30px; }
     header h1 { color: #38bdf8; margin: 0; }
     header h2 { color: #f1f5f9; margin-top: 5px; }
-
     .painel {
       margin-top: 30px;
       background-color: rgba(255, 255, 255, 0.08);
@@ -28,7 +26,6 @@
       width: 350px;
       box-shadow: 0 0 15px rgba(0,0,0,0.5);
     }
-
     label { display: block; margin-top: 10px; font-weight: bold; }
     select {
       width: 100%;
@@ -39,13 +36,10 @@
       font-size: 16px;
       color: #0f172a;
     }
-
     .contador { text-align: center; margin: 25px 0; }
     .contador h3 { color: #38bdf8; margin-bottom: 5px; }
     .contador p { font-size: 48px; color: #fbbf24; font-weight: bold; }
-
     .info { text-align: center; font-size: 14px; color: #94a3b8; margin-bottom: 15px; }
-
     button {
       width: 100%;
       padding: 10px;
@@ -58,7 +52,6 @@
       cursor: pointer;
     }
     button:hover { background-color: #0284c7; }
-
     footer { margin-top: auto; padding: 20px; font-size: 12px; color: #94a3b8; }
   </style>
 </head>
@@ -70,10 +63,10 @@
 
   <div class="painel">
     <label for="maquina">Máquina:</label>
-    <select id="maquina"><option value="">Selecione...</option></select>
+    <select id="maquina"><option value="">Carregando...</option></select>
 
     <label for="peca">Peça:</label>
-    <select id="peca"><option value="">Selecione...</option></select>
+    <select id="peca"><option value="">Carregando...</option></select>
 
     <div class="contador">
       <h3>Produção Atual</h3>
@@ -97,7 +90,7 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Verifica operador logado
+    // Operador logado
     const operador = localStorage.getItem("operador_nome");
     if (!operador) {
       window.location.href = "index.html";
@@ -114,6 +107,7 @@
     let maquinaAtual = "";
     let pecaAtual = "";
 
+    // Atualiza data/hora
     function atualizarDataHora() {
       const agora = new Date();
       dataHoraEl.textContent = `Data/Hora: ${agora.toLocaleString("pt-BR")}`;
@@ -121,65 +115,77 @@
     setInterval(atualizarDataHora, 1000);
     atualizarDataHora();
 
+    // Carrega máquinas e peças
     async function carregarListas() {
-      const { data: maquinas } = await supabase
-        .from("maquinas")
-        .select("id, nome")
-        .order("id", { ascending: true });
+      try {
+        const { data: maquinas, error: erroMaquinas } = await supabase.from("maquinas").select("id, nome").order("id");
+        const { data: pecas, error: erroPecas } = await supabase.from("pecas").select("id, nome").order("id");
 
-      const { data: pecas } = await supabase
-        .from("pecas")
-        .select("id, nome")
-        .order("id", { ascending: true });
+        maquinaSelect.innerHTML = '<option value="">Selecione...</option>';
+        pecaSelect.innerHTML = '<option value="">Selecione...</option>';
 
-      if (maquinas) {
-        maquinas.forEach(m => {
-          const opt = document.createElement("option");
-          opt.value = m.id;
-          opt.textContent = m.nome;
-          maquinaSelect.appendChild(opt);
-        });
-      }
+        if (erroMaquinas) console.error(erroMaquinas);
+        else maquinas.forEach(m => maquinaSelect.appendChild(new Option(m.nome, m.id)));
 
-      if (pecas) {
-        pecas.forEach(p => {
-          const opt = document.createElement("option");
-          opt.value = p.id;
-          opt.textContent = p.nome;
-          pecaSelect.appendChild(opt);
-        });
+        if (erroPecas) console.error(erroPecas);
+        else pecas.forEach(p => pecaSelect.appendChild(new Option(p.nome, p.id)));
+
+      } catch (err) {
+        console.error(err);
       }
     }
     carregarListas();
 
+    // Atualiza contagem
     async function atualizarContagem() {
       if (!maquinaAtual || !pecaAtual) return;
-      const { data } = await supabase
-        .from("producao")
-        .select("quantidade")
-        .eq("operador", operador)
-        .eq("maquina", maquinaAtual)
-        .eq("peca", pecaAtual)
-        .order("data_hora", { ascending: false })
-        .limit(1);
 
-      const qtd = data && data.length > 0 ? data[0].quantidade : 0;
-      contadorEl.textContent = qtd;
-      atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleTimeString("pt-BR")}`;
+      try {
+        const { data, error } = await supabase
+          .from("producao")
+          .select("quantidade")
+          .eq("operador", operador)
+          .eq("maquina", maquinaAtual)
+          .eq("peca", pecaAtual)
+          .order("data_hora", { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        const qtd = data && data.length > 0 ? data[0].quantidade : 0;
+        contadorEl.textContent = qtd;
+        atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleTimeString("pt-BR")}`;
+      } catch (err) {
+        console.error(err);
+      }
     }
+
+    // Realtime: atualiza contador instantaneamente quando há novo registro
+    supabase
+      .channel('realtime_producao')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
+        if (payload.new.maquina == maquinaAtual && payload.new.peca == pecaAtual && payload.new.operador == operador) {
+          atualizarContagem();
+        }
+      })
+      .subscribe();
 
     setInterval(atualizarContagem, 5000);
 
+    // Eventos de seleção
     maquinaSelect.addEventListener("change", () => {
       maquinaAtual = maquinaSelect.value;
       atualizarContagem();
     });
-
     pecaSelect.addEventListener("change", () => {
       pecaAtual = pecaSelect.value;
       atualizarContagem();
     });
 
+    // Botões
     document.getElementById("novaProducao").addEventListener("click", () => {
       maquinaSelect.value = "";
       pecaSelect.value = "";
@@ -188,7 +194,6 @@
       contadorEl.textContent = "0";
       atualizadoEl.textContent = "";
     });
-
     document.getElementById("sair").addEventListener("click", () => {
       localStorage.removeItem("operador_nome");
       window.location.href = "index.html";
@@ -196,4 +201,3 @@
   </script>
 </body>
 </html>
-
