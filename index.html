@@ -52,12 +52,11 @@
     </form>
   </div>
 
-  <!-- Script no final do body para garantir que o DOM já carregou -->
   <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
       const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       const loginForm = document.getElementById("loginForm");
@@ -67,32 +66,28 @@
         e.preventDefault();
         mensagemEl.textContent = "Verificando...";
 
-        // Pega valores digitados
-        let nomeInput = document.getElementById("usuario").value.trim().toLowerCase();
-        let senhaInput = document.getElementById("senha").value.trim();
+        const nomeInput = document.getElementById("usuario").value.trim().toLowerCase();
+        const senhaInput = document.getElementById("senha").value.trim();
 
         try {
-          // Busca todos os operadores
           const { data: operadores, error } = await supabase.from("operadores").select("*");
           if (error) throw error;
 
-          console.log("Operadores do banco:", operadores);
+          if (!operadores || operadores.length === 0) {
+            mensagemEl.textContent = "Não foi possível ler operadores do banco! Verifique permissões/RLS.";
+            return;
+          }
 
-          // Compara nome ignorando maiúsculas/minúsculas e espaços
-          // Senha mantém sensibilidade, mas remove espaços extras
-          const operador = operadores.find(op => 
+          const operador = operadores.find(op =>
             op.nome.trim().toLowerCase() === nomeInput &&
             op.senha.trim() === senhaInput
           );
-
-          console.log("Operador encontrado:", operador);
 
           if (!operador) {
             mensagemEl.textContent = "Usuário ou senha incorretos!";
             return;
           }
 
-          // Salva operador no localStorage e redireciona
           localStorage.setItem("operador_nome", operador.nome);
           window.location.href = "painel.html";
 
