@@ -93,14 +93,13 @@
         const senhaInput = document.getElementById("senha").value.trim();
 
         try {
-          const { data: operadores, error } = await supabase.from("operadores").select("nome, senha");
+          // Busca nome, senha e perfil
+          const { data: operadores, error } = await supabase.from("operadores").select("nome, senha, perfil");
           if (error) throw error;
 
           console.log("Operadores cadastrados no Supabase:");
           operadores.forEach(op => {
-            const nomeStr = String(op.nome || "");
-            const senhaStr = String(op.senha || "");
-            console.log(`"${nomeStr}" (${typeof nomeStr}, ${nomeStr.length}) | "${senhaStr}" (${typeof senhaStr}, ${senhaStr.length})`);
+            console.log(`"${op.nome}" | "${op.senha}" | "${op.perfil}"`);
           });
 
           const operador = operadores.find(op =>
@@ -116,7 +115,14 @@
           }
 
           localStorage.setItem("operador_nome", operador.nome);
-          window.location.href = "painel.html";
+          localStorage.setItem("operador_perfil", operador.perfil);
+
+          // Redireciona de acordo com o perfil
+          if (operador.perfil.toLowerCase() === "administrador") {
+            window.location.href = "relatorios.html";
+          } else {
+            window.location.href = "painel.html";
+          }
 
         } catch (err) {
           console.error("Erro ao conectar com Supabase:", err);
