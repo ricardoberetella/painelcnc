@@ -5,103 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Painel de Relatórios - Produção CNC</title>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 10px 0;
-    }
-
-    .container {
-      background-color: rgba(255,255,255,0.08);
-      padding: 15px;
-      border-radius: 12px;
-      width: 95%;
-      max-width: 1000px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    h1 { color: #38bdf8; margin-bottom: 10px; }
-
-    .filtros {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .filtros select, .filtros input, .filtros button {
-      padding: 6px 8px;
-      border-radius: 6px;
-      border: none;
-      font-size: 14px;
-      color: #0f172a;
-    }
-
-    .filtros button { background-color: #38bdf8; color: white; cursor: pointer; }
-    .filtros button:hover { background-color: #0284c7; }
-
-    #mensagem { font-size: 14px; color: #fbbf24; margin-bottom: 5px; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-
-    th, td {
-      border: 1px solid #fff;
-      padding: 6px;
-      text-align: center;
-    }
-
-    th { background-color: rgba(255,255,255,0.2); }
-
-    button#sair {
-      padding: 8px 12px;
-      margin-top: 10px;
-      background-color: #38bdf8;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      align-self: center;
-    }
-    button#sair:hover { background-color: #0284c7; }
-
-    @media (max-width: 768px) {
-      .filtros {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .filtros select, .filtros input, .filtros button {
-        width: 100%;
-      }
-      th, td { font-size: 12px; padding: 4px; }
-    }
-
-    @media (max-width: 480px) {
-      table { font-size: 10px; }
-      th, td { padding: 3px; }
-      h1 { font-size: 20px; }
-    }
+    html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 10px 0; }
+    .container { background-color: rgba(255,255,255,0.08); padding: 15px; border-radius: 12px; width: 95%; max-width: 1100px; box-shadow: 0 0 15px rgba(0,0,0,0.5); text-align: center; display: flex; flex-direction: column; gap: 12px; }
+    h1 { color: #38bdf8; margin-bottom: 6px; }
+    .top-cards { display:flex; gap:10px; justify-content: center; flex-wrap:wrap; }
+    .card { background: rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; min-width:160px; text-align:left; }
+    .card h3 { margin:0; font-size:14px; color:#94a3b8; }
+    .card p { margin:6px 0 0; font-size:20px; color:#fbbf24; font-weight:700; }
+    .filtros { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center; }
+    .filtros select, .filtros input, .filtros button { padding:6px 8px; border-radius:6px; border:none; font-size:14px; color:#0f172a; }
+    .filtros button { background-color:#38bdf8; color:white; cursor:pointer; }
+    #mensagem { font-size:14px; color:#fbbf24; margin-bottom:5px; }
+    table { width:100%; border-collapse:collapse; font-size:14px; margin-top:8px; }
+    th, td { border:1px solid rgba(255,255,255,0.08); padding:6px; text-align:center; color:#fff; }
+    th { background-color: rgba(255,255,255,0.06); }
+    @media (max-width: 900px) { .top-cards { flex-direction: column; } .card { width:100%; } .filtros { flex-direction:column; align-items:stretch; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Painel de Relatórios</h1>
+    <h1>Painel de Relatórios — Avançado</h1>
     <p id="mensagem"></p>
+
+    <div class="top-cards">
+      <div class="card">
+        <h3>Total (hoje)</h3>
+        <p id="totalHoje">—</p>
+      </div>
+      <div class="card">
+        <h3>Top Operador (7 dias)</h3>
+        <p id="topOperador">—</p>
+      </div>
+      <div class="card">
+        <h3>Top Máquina (7 dias)</h3>
+        <p id="topMaquina">—</p>
+      </div>
+      <div class="card">
+        <h3>Total (últimos 7 dias)</h3>
+        <p id="total7dias">—</p>
+      </div>
+    </div>
+
+    <div style="width:100%; max-width:900px; margin: 0 auto;">
+      <canvas id="chart7dias" style="width:100%; height:240px;"></canvas>
+    </div>
 
     <div class="filtros">
       <select id="filtroMaquina"><option value="">Todas as Máquinas</option></select>
@@ -130,15 +77,18 @@
     <button id="sair">Sair</button>
   </div>
 
+  <!-- libs -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <script>
     const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Verifica se é administrador
-    const perfil = localStorage.getItem("operador_perfil");
-    if (!perfil || perfil.toLowerCase() !== "administrador") {
+    // Verifica se é administrador (padronizado como 'administrador' no login)
+    const perfil = (localStorage.getItem("operador_perfil") || "").toLowerCase();
+    if (!perfil || perfil !== "administrador") {
       alert("Acesso negado! Apenas administradores podem acessar esta página.");
       window.location.href = "index.html";
     }
@@ -157,6 +107,7 @@
 
     let relatorios = [];
 
+    // CARREGA Filtros (maquinas, pecas, operadores)
     async function carregarFiltros() {
       try {
         const { data: maquinas } = await supabase.from("maquinas").select("id, nome").order("nome");
@@ -179,6 +130,7 @@
         if (error) throw error;
         relatorios = data;
         mostrarTabela(relatorios);
+        atualizarResumoEChart(relatorios);
       } catch (err) {
         console.error(err);
         mensagemEl.textContent = "Erro ao carregar relatórios.";
@@ -198,9 +150,9 @@
         const tr = document.createElement("tr");
         tr.dataset.id = row.id;
         tr.innerHTML = `
-          <td>${row.maquina}</td>
-          <td>${row.operador}</td>
-          <td>${row.peca}</td>
+          <td>${row.maquina || ""}</td>
+          <td>${row.operador || ""}</td>
+          <td>${row.peca || ""}</td>
           <td>${row.quantidade}</td>
           <td>${new Date(row.data_hora).toLocaleString("pt-BR")}</td>
         `;
@@ -209,13 +161,14 @@
     }
 
     function aplicarFiltros(dados) {
-      let filtrados = dados;
+      let filtrados = dados.slice(); // copia
+
       if (filtroMaquina.value) filtrados = filtrados.filter(r => r.maquina === filtroMaquina.value);
       if (filtroOperador.value) filtrados = filtrados.filter(r => r.operador === filtroOperador.value);
       if (filtroPeca.value) filtrados = filtrados.filter(r => r.peca === filtroPeca.value);
 
-      const inicio = filtroDataInicio.value ? new Date(filtroDataInicio.value) : null;
-      const fim = filtroDataFim.value ? new Date(filtroDataFim.value) : null;
+      const inicio = filtroDataInicio.value ? new Date(filtroDataInicio.value + "T00:00:00") : null;
+      const fim = filtroDataFim.value ? new Date(filtroDataFim.value + "T23:59:59") : null;
 
       if (inicio) filtrados = filtrados.filter(r => new Date(r.data_hora) >= inicio);
       if (fim) filtrados = filtrados.filter(r => new Date(r.data_hora) <= fim);
@@ -223,7 +176,11 @@
       return filtrados;
     }
 
-    btnFiltrar.addEventListener("click", () => mostrarTabela(aplicarFiltros(relatorios)));
+    btnFiltrar.addEventListener("click", () => {
+      const filtrados = aplicarFiltros(relatorios);
+      mostrarTabela(filtrados);
+      atualizarResumoEChart(filtrados);
+    });
 
     btnResetar.addEventListener("click", () => {
       filtroMaquina.value = "";
@@ -232,6 +189,7 @@
       filtroDataInicio.value = "";
       filtroDataFim.value = "";
       mostrarTabela(relatorios);
+      atualizarResumoEChart(relatorios);
     });
 
     btnExportar.addEventListener("click", () => {
@@ -255,23 +213,107 @@
       window.location.href = "index.html";
     });
 
-    // ATUALIZAÇÃO EM TEMPO REAL (INSERT, UPDATE, DELETE)
+    // Realtime: INSERT/UPDATE/DELETE
     const canal = supabase.channel('realtime_producao')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
         relatorios.unshift(payload.new);
         mostrarTabela(aplicarFiltros(relatorios));
+        atualizarResumoEChart(relatorios);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'producao' }, payload => {
         const index = relatorios.findIndex(r => r.id === payload.new.id);
         if (index !== -1) relatorios[index] = payload.new;
         mostrarTabela(aplicarFiltros(relatorios));
+        atualizarResumoEChart(relatorios);
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'producao' }, payload => {
         relatorios = relatorios.filter(r => r.id !== payload.old.id);
         mostrarTabela(aplicarFiltros(relatorios));
+        atualizarResumoEChart(relatorios);
       })
       .subscribe();
 
+    // --- Relatórios Avançados (Resumo + Chart) ---
+    let chart7dias = null;
+
+    function atualizarResumoEChart(dados) {
+      // total hoje
+      const hoje = new Date();
+      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0,0,0);
+      const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23,59,59);
+      const hojeDados = dados.filter(r => {
+        const d = new Date(r.data_hora);
+        return d >= inicioHoje && d <= fimHoje;
+      });
+      const totalHoje = hojeDados.reduce((s, r) => s + Number(r.quantidade || 0), 0);
+      document.getElementById("totalHoje").textContent = totalHoje;
+
+      // últimos 7 dias
+      const dias = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dias.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+      }
+      const somaPorDia = dias.map(dia => {
+        const inicio = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 0,0,0);
+        const fim = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 23,59,59);
+        return dados
+          .filter(r => {
+            const dt = new Date(r.data_hora);
+            return dt >= inicio && dt <= fim;
+          })
+          .reduce((s, r) => s + Number(r.quantidade || 0), 0);
+      });
+
+      const total7 = somaPorDia.reduce((a,b)=>a+b,0);
+      document.getElementById("total7dias").textContent = total7;
+
+      // Top operador (7 dias)
+      const seteDiasAtras = new Date();
+      seteDiasAtras.setDate(seteDiasAtras.getDate() - 6);
+      const dados7 = dados.filter(r => new Date(r.data_hora) >= new Date(seteDiasAtras.setHours(0,0,0,0)));
+      const operadorMap = {};
+      const maquinaMap = {};
+      dados7.forEach(r => {
+        const q = Number(r.quantidade || 0);
+        operadorMap[r.operador] = (operadorMap[r.operador] || 0) + q;
+        maquinaMap[r.maquina] = (maquinaMap[r.maquina] || 0) + q;
+      });
+      const topOperador = Object.entries(operadorMap).sort((a,b)=>b[1]-a[1])[0] || ["—",0];
+      const topMaquina = Object.entries(maquinaMap).sort((a,b)=>b[1]-a[1])[0] || ["—",0];
+      document.getElementById("topOperador").textContent = `${topOperador[0] || "—"} (${topOperador[1] || 0})`;
+      document.getElementById("topMaquina").textContent = `${topMaquina[0] || "—"} (${topMaquina[1] || 0})`;
+
+      // Atualiza chart
+      const labels = dias.map(d => d.toLocaleDateString("pt-BR"));
+      if (!chart7dias) {
+        const ctx = document.getElementById("chart7dias").getContext("2d");
+        chart7dias = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Peças produzidas (últimos 7 dias)',
+              data: somaPorDia,
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      } else {
+        chart7dias.data.labels = labels;
+        chart7dias.data.datasets[0].data = somaPorDia;
+        chart7dias.update();
+      }
+    }
+
+    // Inicializa
     carregarFiltros();
     carregarRelatorios();
   </script>
