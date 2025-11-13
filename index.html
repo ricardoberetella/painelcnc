@@ -65,6 +65,7 @@
   <h1>Controle de</h1>
   <h1>Produção CNC</h1>
   <br>
+
   <div class="login-container">
     <input id="codigo" placeholder="Código do operador (ex: OP001)" />
     <input id="senha" type="password" placeholder="Senha" />
@@ -72,45 +73,65 @@
     <div id="mensagem"></div>
   </div>
 
-  <!--1️⃣ Biblioteca oficial do Supabase -->
+  <!-- Biblioteca Supabase -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- 2️⃣ Seu código JavaScript -->
- <script>
-  // --- Configuração do Supabase ---
-  const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co"; // ⬅️ coloque o seu
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"; // ⬅️ coloque o seu
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <script>
+    // --- Configuração Supabase ---
+    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // --- Função de login ---
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+    const btnEntrar = document.getElementById("entrarBtn");
+    const msg = document.getElementById("mensagem");
 
-    const nome = document.getElementById("usuario").value.trim();
-    const senha = document.getElementById("senha").value.trim();
+    btnEntrar.addEventListener("click", async () => {
+      const codigo = document.getElementById("codigo").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      msg.textContent = "";
 
-    if (!nome || !senha) {
-      alert("Preencha todos os campos!");
-      return;
-    }
+      if (!codigo || !senha) {
+        msg.textContent = "Por favor, preencha código e senha.";
+        return;
+      }
 
-    // Busca o operador no Supabase
-    const { data: operador, error } = await supabase
-      .from("operadores")
-      .select("*")
-      .eq("nome", nome)
-      .eq("senha", senha)
-      .single();
+      msg.textContent = "Verificando...";
 
-    if (error || !operador) {
-      alert("Usuário ou senha incorretos!");
-      return;
-    }
+      try {
+        const { data, error } = await supabase
+          .from("operadores")
+          .select("*")
+          .eq("codigo", codigo)
+          .eq("senha", senha);
 
-    // Armazena o nome no navegador
-    localStorage.setItem("operador_nome", operador.nome);
+        if (error) {
+          msg.textContent = "Erro de conexão com o banco.";
+          console.error(error);
+          return;
+        }
 
-    // Redireciona para o painel
-    window.location.href = "painel.html";
-  });
-</script>
+        if (data && data.length > 0) {
+          const operador = data[0];
+          msg.style.color = "#4ade80";
+          msg.textContent = "Bem-vindo, " + operador.nome + "!";
+
+          // Armazena dados no navegador
+          localStorage.setItem("operador_nome", operador.nome);
+          localStorage.setItem("operador_id", operador.id);
+
+          // Redireciona
+          setTimeout(() => {
+            window.location.href = "painel.html";
+          }, 800);
+        } else {
+          msg.style.color = "#f87171";
+          msg.textContent = "Código ou senha incorretos.";
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "Erro inesperado ao fazer login.";
+      }
+    });
+  </script>
+</body>
+</html>
