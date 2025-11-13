@@ -1,95 +1,42 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login do Operador - Produção CNC</title>
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-    h1 { color: #38bdf8; margin-bottom: 10px; }
-    .login-container {
-      background-color: rgba(255, 255, 255, 0.1);
-      padding: 30px;
-      border-radius: 12px;
-      width: 320px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #38bdf8;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover { background-color: #0284c7; }
-    #mensagem { color: #fbbf24; margin-top: 10px; }
-  </style>
-</head>
-<body>
-  <h1>Controle de Produção CNC</h1>
-  <div class="login-container">
-    <form id="loginForm">
-      <input id="usuario" placeholder="Nome do Operador" required />
-      <input id="senha" type="password" placeholder="Senha" required />
-      <button type="submit">Entrar</button>
-      <div id="mensagem"></div>
-    </form>
-  </div>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const loginForm = document.getElementById("loginForm");
+  const mensagemEl = document.getElementById("mensagem");
 
-    const loginForm = document.getElementById("loginForm");
-    const mensagemEl = document.getElementById("mensagem");
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    mensagemEl.textContent = "Verificando...";
 
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      mensagemEl.textContent = "Verificando...";
-      
-      const nome = document.getElementById("usuario").value.trim();
-      const senha = document.getElementById("senha").value.trim();
+    let nome = document.getElementById("usuario").value.trim().toLowerCase();
+    let senha = document.getElementById("senha").value.trim();
 
-      try {
-        const { data: operador, error } = await supabase
-          .from("operadores")
-          .select("*")
-          .eq("nome", nome)
-          .eq("senha", senha)
-          .single();
+    console.log("Tentando login com:", { nome, senha });
 
-        if (error || !operador) {
-          mensagemEl.textContent = "Usuário ou senha incorretos!";
-          return;
-        }
+    try {
+      // Busca todos os operadores e faz match manual ignorando maiúsculas/minúsculas
+      const { data: operadores, error } = await supabase
+        .from("operadores")
+        .select("*");
 
-        localStorage.setItem("operador_nome", operador.nome);
-        window.location.href = "painel.html";
+      if (error) throw error;
 
-      } catch (err) {
-        console.error(err);
-        mensagemEl.textContent = "Erro de conexão com o servidor!";
+      const operador = operadores.find(op => op.nome.trim().toLowerCase() === nome && op.senha.trim() === senha);
+
+      if (!operador) {
+        mensagemEl.textContent = "Usuário ou senha incorretos!";
+        return;
       }
-    });
-  </script>
-</body>
-</html>
+
+      localStorage.setItem("operador_nome", operador.nome);
+      window.location.href = "painel.html";
+
+    } catch (err) {
+      console.error(err);
+      mensagemEl.textContent = "Erro de conexão com o servidor!";
+    }
+  });
+</script>
