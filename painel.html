@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Produção - CNC</title>
-
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Produção</title>
 
   <style>
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
+      margin: 0;
       background: #0f172a;
       color: #fff;
+    }
+
+    header {
+      background: #1e293b;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .area {
       padding: 20px;
     }
 
-    h1, h2 {
-      text-align: center;
-      margin: 0;
+    select, button, input {
       padding: 10px;
-    }
-
-    select, button {
-      padding: 10px;
-      font-size: 16px;
-      margin-top: 10px;
-      width: 100%;
-      border-radius: 8px;
       border: none;
+      border-radius: 6px;
+      margin: 5px 0;
     }
 
     button {
@@ -43,97 +44,169 @@
     }
 
     .box {
-      background: rgba(255,255,255,0.1);
-      padding: 20px;
-      border-radius: 12px;
-      margin-top: 20px;
-      backdrop-filter: blur(6px);
+      padding: 15px;
+      background: #1e293b;
+      border-radius: 10px;
+      margin-bottom: 15px;
     }
 
     .contador {
-      font-size: 48px;
-      text-align: center;
-      margin: 20px 0;
+      font-size: 28px;
       font-weight: bold;
+      margin-top: 10px;
     }
-
   </style>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
 
-<h1>PAINEL DE PRODUÇÃO</h1>
+<header>Painel de Produção CNC</header>
 
-<div class="box">
-  <h2>Operador: <span id="operadorNome"></span></h2>
-  <h3>Máquina: <span id="maquinaNome"></span></h3>
-</div>
+<div class="area">
 
-<div class="box">
-  <label>Selecione a peça:</label>
-  <select id="pecasSelect"></select>
-</div>
+  <div class="box">
+    <p><b>Operador logado:</b> <span id="operadorNome"></span></p>
+    <p><b>Máquina:</b> <span id="maquinaNome"></span></p>
+  </div>
 
-<div class="box">
-  <button id="novaProducao">INICIAR NOVA PRODUÇÃO</button>
-</div>
+  <div class="box">
+    <label>Selecione a Peça:</label>
+    <select id="listaPecas"></select>
 
-<div class="box">
-  <h2>Contagem Atual</h2>
-  <div class="contador" id="contador">0</div>
+    <button id="novaProducao">Iniciar Nova Produção</button>
+
+    <p>Total Produzido:</p>
+    <div class="contador" id="contadorPecas">0</div>
+  </div>
+
 </div>
 
 
 <script>
-
-  // ============================================
-  // 1) DEFINA A MÁQUINA AQUI
-  // Cada Raspberry recebe sua versão com o ID correto
-  // Torno 01 = 1 | Torno 02 = 2 | Torno 03 = 3
-  // ============================================
-  const maquinaID = 1;
-  const nomeMaquina = maquinaID === 1 ? "Torno 01"
-                    : maquinaID === 2 ? "Torno 02"
-                    : "Torno 03";
-
-  document.getElementById("maquinaNome").textContent = nomeMaquina;
-
-  // ============================================
-  // Conexão Supabase
-  // ============================================
+  // ==============================
+  // CONFIGURAÇÃO SUPABASE
+  // ==============================
   const supabaseClient = supabase.createClient(
     "https://wcgrcntyencwkwwnuwyz.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"
   );
 
-  let operador = localStorage.getItem("operador");
+  // ==============================
+  // RECUPERAR LOGIN DO OPERADOR
+  // ==============================
+  const operador = localStorage.getItem("operador");
+  const perfil = localStorage.getItem("perfil");
+
   if (!operador) {
     window.location.href = "index.html";
   }
-  document.getElementById("operadorNome").textContent = operador;
+
+  document.getElementById("operadorNome").innerText = operador;
+
+  // ==============================
+  // DEFINIR A MÁQUINA DO RASP
+  // ==============================
+  // Aqui você define manualmente qual máquina este painel representa.
+  // Exemplo: "Torno 01", "Torno 02", "Torno 03"
+  // Para cada RASP, altere apenas esta linha:
+  const nomeDaMaquina = "Torno 01";
+
+  document.getElementById("maquinaNome").innerText = nomeDaMaquina;
 
 
-  // ============================================
-  // Carregar lista de peças
-  // ============================================
+  // ==============================
+  // 1. CARREGAR LISTA DE PEÇAS
+  // ==============================
   async function carregarPecas() {
     const { data, error } = await supabaseClient
       .from("pecas")
       .select("*")
-      .order("nome");
+      .order("nome", { ascending: true });
 
-    if (!error) {
-      const select = document.getElementById("pecasSelect");
-      select.innerHTML = "";
+    const lista = document.getElementById("listaPecas");
+    lista.innerHTML = "";
 
+    if (data) {
       data.forEach(p => {
-        const op = document.createElement("option");
-        op.value = p.nome;
-        op.textContent = p.nome;
-        select.appendChild(op);
+        lista.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
       });
     }
   }
+  carregarPecas();
 
 
-  // ============
+  // ==============================
+  // 2. CONTAR PRODUÇÃO ATUAL
+  // ==============================
+  async function atualizarContagem() {
+    const pecaSelecionada = document.getElementById("listaPecas").value;
+
+    const { data, error } = await supabaseClient
+      .from("producao")
+      .select("quantidade")
+      .eq("máquina", nomeDaMaquina)
+      .eq("peças", pecaSelecionada);
+
+    let total = 0;
+    if (data) {
+      data.forEach(r => total += r.quantidade);
+    }
+
+    document.getElementById("contadorPecas").innerText = total;
+  }
+
+
+  // Atualiza automaticamente ao trocar peça
+  document.getElementById("listaPecas").addEventListener("change", atualizarContagem);
+
+
+  // ==============================
+  // 3. INICIAR NOVA PRODUÇÃO
+  // ==============================
+  document.getElementById("novaProducao").addEventListener("click", async () => {
+
+    const pecaSelecionada = document.getElementById("listaPecas").value;
+
+    const novoRegistro = {
+      operador: operador,
+      peças: pecaSelecionada,
+      máquina: nomeDaMaquina,
+      quantidade: 0,
+      data_e_hora: new Date().toISOString()
+    };
+
+    const { error } = await supabaseClient
+      .from("producao")
+      .insert(novoRegistro);
+
+    if (error) {
+      alert("Erro ao iniciar nova produção!");
+      console.error(error);
+      return;
+    }
+
+    alert("Nova produção iniciada!");
+    atualizarContagem();
+  });
+
+
+  // ==============================
+  // 4. REALTIME – Atualiza ao vivo
+  // ==============================
+  supabaseClient
+    .channel("realtime-producao")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "producao" },
+      () => {
+        atualizarContagem();
+      }
+    )
+    .subscribe();
+
+</script>
+
+</body>
+</html>
