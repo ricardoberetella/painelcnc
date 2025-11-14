@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatórios de Produção</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Produção</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       background: #0f172a;
-      color: white;
+      color: #fff;
     }
 
     header {
       background: #1e293b;
       padding: 20px;
       text-align: center;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: bold;
     }
 
@@ -25,49 +25,35 @@
       padding: 20px;
     }
 
-    .filtros {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    select, input, button {
+    select, button, input {
       padding: 10px;
       border: none;
       border-radius: 6px;
+      margin: 5px 0;
     }
 
     button {
       background: #10b981;
       color: white;
+      font-weight: bold;
       cursor: pointer;
-      font-weight: bold;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
+    button:hover {
+      background: #059669;
     }
 
-    th, td {
-      border-bottom: 1px solid #334155;
-      padding: 10px;
-      text-align: left;
-    }
-
-    th {
-      background: #1e293b;
-    }
-
-    .total-box {
-      background: #1e293b;
+    .box {
       padding: 15px;
+      background: #1e293b;
       border-radius: 10px;
-      margin-top: 20px;
-      font-size: 20px;
+      margin-bottom: 15px;
+    }
+
+    .contador {
+      font-size: 28px;
       font-weight: bold;
+      margin-top: 10px;
     }
   </style>
 
@@ -76,44 +62,23 @@
 
 <body>
 
-<header>Relatórios de Produção CNC</header>
+<header>Painel de Produção CNC</header>
 
 <div class="area">
 
-  <div class="filtros">
-
-    <select id="filtroMaquina">
-      <option value="">Todas as Máquinas</option>
-    </select>
-
-    <select id="filtroPeca">
-      <option value="">Todas as Peças</option>
-    </select>
-
-    <select id="filtroOperador">
-      <option value="">Todos Operadores</option>
-    </select>
-
-    <input type="date" id="filtroData">
-
-    <button onclick="carregarRelatorio()">Filtrar</button>
+  <div class="box">
+    <p><b>Operador logado:</b> <span id="operadorNome"></span></p>
+    <p><b>Máquina:</b> <span id="maquinaNome"></span></p>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Data/Hora</th>
-        <th>Máquina</th>
-        <th>Peça</th>
-        <th>Operador</th>
-        <th>Quantidade</th>
-      </tr>
-    </thead>
-    <tbody id="tabelaDados"></tbody>
-  </table>
+  <div class="box">
+    <label>Selecione a Peça:</label>
+    <select id="listaPecas"></select>
 
-  <div class="total-box">
-    Total Produzido: <span id="totalGeral">0</span>
+    <button id="novaProducao">Iniciar Nova Produção</button>
+
+    <p>Total Produzido:</p>
+    <div class="contador" id="contadorPecas">0</div>
   </div>
 
 </div>
@@ -129,77 +94,113 @@
   );
 
   // ==============================
-  // PERMISSÃO: SOMENTE ADMIN
+  // RECUPERAR LOGIN DO OPERADOR
   // ==============================
   const operador = localStorage.getItem("operador");
   const perfil = localStorage.getItem("perfil");
 
-  if (perfil !== "administrador") {
-    alert("Acesso permitido apenas para administradores.");
+  if (!operador) {
     window.location.href = "index.html";
   }
 
+  document.getElementById("operadorNome").innerText = operador;
+
   // ==============================
-  // CARREGAR LISTAS (opções dos filtros)
+  // DEFINIR A MÁQUINA DO RASP
   // ==============================
-  async function carregarFiltros() {
+  const nomeDaMaquina = "Torno 01"; // ALTERE POR RASP
+  document.getElementById("maquinaNome").innerText = nomeDaMaquina;
 
-    // Carregar máquinas
-    const m = await supabaseClient.from("maquinas").select("*").order("nome");
-    const selMaquina = document.getElementById("filtroMaquina");
 
-    m.data?.forEach(x => {
-      selMaquina.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
-    });
+  // ==============================
+  // 1. CARREGAR PEÇAS
+  // ==============================
+  async function carregarPecas() {
+    const { data, error } = await supabaseClient
+      .from("pecas")
+      .select("*")
+      .order("nome", { ascending: true });
 
-    // Carregar peças
-    const p = await supabaseClient.from("pecas").select("*").order("nome");
-    const selPeca = document.getElementById("filtroPeca");
+    const lista = document.getElementById("listaPecas");
+    lista.innerHTML = "";
 
-    p.data?.forEach(x => {
-      selPeca.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
-    });
+    if (data) {
+      data.forEach(p => {
+        lista.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+      });
+    }
 
-    // Carregar operadores
-    const o = await supabaseClient.from("operadores").select("*").order("nome");
-    const selOperador = document.getElementById("filtroOperador");
+    atualizarContagem();
+  }
+  carregarPecas();
 
-    o.data?.forEach(x => {
-      selOperador.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
-    });
+
+  // ==============================
+  // 2. CONTAGEM
+  // ==============================
+  async function atualizarContagem() {
+    const pecaSelecionada = document.getElementById("listaPecas").value;
+
+    const { data, error } = await supabaseClient
+      .from("producao")
+      .select("quantidade")
+      .eq("máquina", nomeDaMaquina)
+      .eq("peças", pecaSelecionada);
+
+    let total = 0;
+    if (data) {
+      data.forEach(r => total += r.quantidade);
+    }
+
+    document.getElementById("contadorPecas").innerText = total;
   }
 
-  carregarFiltros();
+  document.getElementById("listaPecas").addEventListener("change", atualizarContagem);
 
 
   // ==============================
-  // CARREGAR RELATÓRIO
+  // 3. INICIAR NOVA PRODUÇÃO
   // ==============================
-  async function carregarRelatorio() {
-    const fMaq = document.getElementById("filtroMaquina").value;
-    const fPeca = document.getElementById("filtroPeca").value;
-    const fOper = document.getElementById("filtroOperador").value;
-    const fData = document.getElementById("filtroData").value;
+  document.getElementById("novaProducao").addEventListener("click", async () => {
 
-    let query = supabaseClient.from("producao").select("*").order("data_e_hora", { ascending: false });
+    const pecaSelecionada = document.getElementById("listaPecas").value;
 
-    if (fMaq) query = query.eq("máquina", fMaq);
-    if (fPeca) query = query.eq("peças", fPeca);
-    if (fOper) query = query.eq("operador", fOper);
-    if (fData) query = query.gte("data_e_hora", fData + " 00:00:00").lte("data_e_hora", fData + " 23:59:59");
+    const novoRegistro = {
+      operador: operador,
+      peças: pecaSelecionada,
+      máquina: nomeDaMaquina,
+      quantidade: 0,
+      data_hora: new Date().toISOString() // CORRIGIDO
+    };
 
-    const { data, error } = await query;
+    const { error } = await supabaseClient
+      .from("producao")
+      .insert(novoRegistro);
 
-    const tabela = document.getElementById("tabelaDados");
-    tabela.innerHTML = "";
+    if (error) {
+      console.error(error);
+      alert("Erro ao iniciar nova produção!");
+      return;
+    }
 
-    let totalGeral = 0;
+    alert("Nova produção iniciada!");
+    atualizarContagem();
+  });
 
-    data?.forEach(row => {
-      tabela.innerHTML += `
-        <tr>
-          <td>${new Date(row.data_e_hora).toLocaleString()}</td>
-          <td>${row.máquina}</td>
-          <td>${row.peças}</td>
-          <td>${row.operador}</td>
-          <td>${row.quantidade}</td>
+
+  // ==============================
+  // 4. REALTIME
+  // ==============================
+  supabaseClient
+    .channel("realtime-producao")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "producao" },
+      () => atualizarContagem()
+    )
+    .subscribe();
+
+</script>
+
+</body>
+</html>
