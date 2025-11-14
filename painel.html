@@ -108,16 +108,12 @@
   // ==============================
   // DEFINIR A MÁQUINA DO RASP
   // ==============================
-  // Aqui você define manualmente qual máquina este painel representa.
-  // Exemplo: "Torno 01", "Torno 02", "Torno 03"
-  // Para cada RASP, altere apenas esta linha:
-  const nomeDaMaquina = "Torno 01";
-
+  const nomeDaMaquina = "Torno 01"; // ALTERE POR RASP
   document.getElementById("maquinaNome").innerText = nomeDaMaquina;
 
 
   // ==============================
-  // 1. CARREGAR LISTA DE PEÇAS
+  // 1. CARREGAR PEÇAS
   // ==============================
   async function carregarPecas() {
     const { data, error } = await supabaseClient
@@ -133,12 +129,14 @@
         lista.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
       });
     }
+
+    atualizarContagem();
   }
   carregarPecas();
 
 
   // ==============================
-  // 2. CONTAR PRODUÇÃO ATUAL
+  // 2. CONTAGEM
   // ==============================
   async function atualizarContagem() {
     const pecaSelecionada = document.getElementById("listaPecas").value;
@@ -157,8 +155,6 @@
     document.getElementById("contadorPecas").innerText = total;
   }
 
-
-  // Atualiza automaticamente ao trocar peça
   document.getElementById("listaPecas").addEventListener("change", atualizarContagem);
 
 
@@ -174,7 +170,7 @@
       peças: pecaSelecionada,
       máquina: nomeDaMaquina,
       quantidade: 0,
-      data_e_hora: new Date().toISOString()
+      data_hora: new Date().toISOString() // CORRIGIDO
     };
 
     const { error } = await supabaseClient
@@ -182,8 +178,8 @@
       .insert(novoRegistro);
 
     if (error) {
-      alert("Erro ao iniciar nova produção!");
       console.error(error);
+      alert("Erro ao iniciar nova produção!");
       return;
     }
 
@@ -193,16 +189,14 @@
 
 
   // ==============================
-  // 4. REALTIME – Atualiza ao vivo
+  // 4. REALTIME
   // ==============================
   supabaseClient
     .channel("realtime-producao")
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: "producao" },
-      () => {
-        atualizarContagem();
-      }
+      () => atualizarContagem()
     )
     .subscribe();
 
