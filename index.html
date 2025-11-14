@@ -4,123 +4,137 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login do Operador - Produção CNC</title>
-
   <style>
-    body {
+    html, body {
+      height: 100%;
       margin: 0;
-      height: 100vh;
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a, #1e293b);
       display: flex;
-      justify-content: center;
       align-items: center;
-      color: #fff;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
     }
 
     .login-container {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 40px;
-      border-radius: 15px;
+      background-color: rgba(255,255,255,0.1);
+      padding: 30px;
+      border-radius: 12px;
       width: 320px;
       text-align: center;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
 
-    input {
+    h1 {
+      color: #38bdf8;
+      margin-bottom: 10px;
+    }
+
+    .form-title {
+      font-size: 20px;
+      color: #f1f5f9;
+      margin-bottom: 20px;
+    }
+
+    input, button {
       width: 100%;
       padding: 10px;
+      margin-top: 10px;
       border-radius: 6px;
       border: none;
-      outline: none;
-      margin-top: 15px;
-      text-transform: uppercase;
+      font-size: 16px;
     }
 
     button {
-      width: 100%;
-      margin-top: 20px;
-      padding: 12px;
-      background: #10b981;
+      background-color: #38bdf8;
       color: white;
-      border: none;
-      border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
     }
 
     button:hover {
-      background: #059669;
+      background-color: #0284c7;
+    }
+
+    #mensagem {
+      margin-top: 10px;
+      color: #fbbf24;
     }
   </style>
-
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
-
   <div class="login-container">
-    <h2>Produção CNC</h2>
-    <p>Login por nome e senha</p>
-
-    <input type="text" id="nome" placeholder="Nome do operador" />
-    <input type="password" id="senha" placeholder="Senha" />
-
-    <button id="entrar">Entrar</button>
+    <div class="form-title">Controle de Produção</div>
+    <h1>Login do Operador</h1>
+    <form id="loginForm">
+      <input id="usuario" placeholder="Nome do Operador" required />
+      <input id="senha" type="password" placeholder="Senha" required />
+      <button type="submit">Entrar</button>
+      <div id="mensagem"></div>
+    </form>
   </div>
 
+  <!-- Supabase JS -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
 
-<script>
+  <script defer>
+    document.addEventListener("DOMContentLoaded", () => {
+      const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Cliente Supabase
-  const supabaseClient = supabase.createClient(
-    "https://wcgrcntyencwkwwnuwyz.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"
-  );
+      const loginForm = document.getElementById("loginForm");
+      const mensagemEl = document.getElementById("mensagem");
 
-  document.getElementById("entrar").addEventListener("click", async () => {
-    const nomeDigitado = document.getElementById("nome").value.trim().toUpperCase();
-    const senhaDigitada = document.getElementById("senha").value.trim();
+      loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        mensagemEl.textContent = "Verificando...";
 
-    if (nomeDigitado.length < 2) {
-      alert("Digite um nome válido.");
-      return;
-    }
+        const nomeInput = document.getElementById("usuario").value.trim();
+        const senhaInput = document.getElementById("senha").value.trim();
 
-    if (senhaDigitada.length < 1) {
-      alert("Digite sua senha.");
-      return;
-    }
+        try {
+          // Busca nome, senha e perfil
+          const { data: operadores, error } = await supabase.from("operadores").select("nome, senha, perfil");
+          if (error) throw error;
 
-    // Busca operador com nome + senha + ativo
-    const { data, error } = await supabaseClient
-      .from("operadores")
-      .select("*")
-      .eq("nome", nomeDigitado)
-      .eq("senha", senhaDigitada)
-      .eq("ativo", true)
-      .maybeSingle();
+          console.log("Operadores cadastrados no Supabase:");
+          operadores.forEach(op => {
+            console.log(`"${op.nome}" | "${op.senha}" | "${op.perfil}"`);
+          });
 
-    if (error || !data) {
-      alert("Nome ou senha incorretos, ou operador inativo.");
-      return;
-    }
+          const operador = operadores.find(op =>
+            String(op.nome || "").trim().toUpperCase() === nomeInput.toUpperCase() &&
+            String(op.senha || "").trim() === senhaInput
+          );
 
-    const operador = data.nome;
-    const perfil = (data.perfil || "").toLowerCase();
+          console.log("Operador encontrado:", operador);
 
-    // salva sessão local
-    localStorage.setItem("operador", operador);
-    localStorage.setItem("perfil", perfil);
+          if (!operador) {
+            mensagemEl.textContent = "Usuário ou senha incorretos!";
+            return;
+          }
 
-    if (perfil === "administrador") {
-      window.location.href = "relatorios.html";
-    } else {
-      window.location.href = "painel.html";
-    }
-  });
+          // Normaliza nome e perfil
+          const nome = String(operador.nome || "").trim();
+          const perfil = String(operador.perfil || "").trim().toLowerCase();
 
-</script>
+          // Salva no localStorage
+          localStorage.setItem("operador_nome", nome);
+          localStorage.setItem("operador_perfil", perfil);
 
+          // Redireciona de acordo com o perfil
+          if (perfil === "administrador") {
+            window.location.href = "relatorios.html";
+          } else {
+            window.location.href = "painel.html";
+          }
+
+        } catch (err) {
+          console.error("Erro ao conectar com Supabase:", err);
+          mensagemEl.textContent = "Erro de conexão com o servidor!";
+        }
+      });
+    });
+  </script>
 </body>
 </html>
