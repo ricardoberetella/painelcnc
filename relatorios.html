@@ -3,47 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatórios de Produção - CNC</title>
-
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <title>Relatórios de Produção</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
       background: #0f172a;
       color: white;
-      padding: 20px;
     }
 
-    h1 {
+    header {
+      background: #1e293b;
+      padding: 20px;
       text-align: center;
+      font-size: 24px;
+      font-weight: bold;
     }
 
-    .filtros, .resultados {
-      background: rgba(255,255,255,0.1);
+    .area {
       padding: 20px;
-      border-radius: 12px;
-      margin-top: 20px;
-      backdrop-filter: blur(6px);
+    }
+
+    .filtros {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
     }
 
     select, input, button {
-      padding: 8px;
-      margin: 10px 0;
-      width: 100%;
-      border-radius: 6px;
+      padding: 10px;
       border: none;
+      border-radius: 6px;
     }
 
     button {
       background: #10b981;
-      font-weight: bold;
       color: white;
       cursor: pointer;
-    }
-
-    button:hover {
-      background: #059669;
+      font-weight: bold;
     }
 
     table {
@@ -53,191 +52,154 @@
     }
 
     th, td {
+      border-bottom: 1px solid #334155;
       padding: 10px;
       text-align: left;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
     }
 
     th {
-      background: rgba(255,255,255,0.15);
+      background: #1e293b;
     }
 
-    .total {
+    .total-box {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
       font-size: 20px;
       font-weight: bold;
-      margin-top: 15px;
-      text-align: right;
     }
-
   </style>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
 
-<h1>RELATÓRIOS DE PRODUÇÃO</h1>
+<header>Relatórios de Produção CNC</header>
 
-<div class="filtros">
-  <h2>Filtros</h2>
+<div class="area">
 
-  <label>Máquina:</label>
-  <select id="filtroMaquina">
-    <option value="">Todas</option>
-    <option value="1">Torno 01</option>
-    <option value="2">Torno 02</option>
-    <option value="3">Torno 03</option>
-  </select>
+  <div class="filtros">
 
-  <label>Peça:</label>
-  <select id="filtroPeca"></select>
+    <select id="filtroMaquina">
+      <option value="">Todas as Máquinas</option>
+    </select>
 
-  <label>Operador:</label>
-  <select id="filtroOperador"></select>
+    <select id="filtroPeca">
+      <option value="">Todas as Peças</option>
+    </select>
 
-  <label>Data Inicial:</label>
-  <input type="date" id="dataInicio">
+    <select id="filtroOperador">
+      <option value="">Todos Operadores</option>
+    </select>
 
-  <label>Data Final:</label>
-  <input type="date" id="dataFim">
+    <input type="date" id="filtroData">
 
-  <button onclick="gerarRelatorio()">Gerar Relatório</button>
-  <button onclick="window.location.href='index.html'" style="background:#ef4444">Sair</button>
-</div>
+    <button onclick="carregarRelatorio()">Filtrar</button>
+  </div>
 
-<div class="resultados">
-  <h2>Resultados</h2>
   <table>
     <thead>
       <tr>
         <th>Data/Hora</th>
         <th>Máquina</th>
-        <th>Operador</th>
         <th>Peça</th>
-        <th>Qtd</th>
+        <th>Operador</th>
+        <th>Quantidade</th>
       </tr>
     </thead>
-    <tbody id="tabelaResultados"></tbody>
+    <tbody id="tabelaDados"></tbody>
   </table>
 
-  <div class="total" id="totalGeral">Total: 0 peças</div>
+  <div class="total-box">
+    Total Produzido: <span id="totalGeral">0</span>
+  </div>
+
 </div>
 
 
 <script>
-
-  // ============================================
-  // Supabase
-  // ============================================
+  // ==============================
+  // CONFIGURAÇÃO SUPABASE
+  // ==============================
   const supabaseClient = supabase.createClient(
     "https://wcgrcntyencwkwwnuwyz.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"
   );
 
-  // Verifica perfil administrador
+  // ==============================
+  // PERMISSÃO: SOMENTE ADMIN
+  // ==============================
+  const operador = localStorage.getItem("operador");
   const perfil = localStorage.getItem("perfil");
+
   if (perfil !== "administrador") {
-    alert("Acesso restrito aos administradores.");
+    alert("Acesso permitido apenas para administradores.");
     window.location.href = "index.html";
   }
 
-  // ============================================
-  // Carregar lista de peças e operadores
-  // ============================================
-  async function carregarListas() {
+  // ==============================
+  // CARREGAR LISTAS (opções dos filtros)
+  // ==============================
+  async function carregarFiltros() {
 
-    // PEÇAS
-    const pecas = await supabaseClient.from("pecas").select("*").order("nome");
-    const selectPeca = document.getElementById("filtroPeca");
-    selectPeca.innerHTML = '<option value="">Todas</option>';
+    // Carregar máquinas
+    const m = await supabaseClient.from("maquinas").select("*").order("nome");
+    const selMaquina = document.getElementById("filtroMaquina");
 
-    pecas.data.forEach(p => {
-      const op = document.createElement("option");
-      op.value = p.nome;
-      op.textContent = p.nome;
-      selectPeca.appendChild(op);
+    m.data?.forEach(x => {
+      selMaquina.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
     });
 
-    // OPERADORES
-    const ops = await supabaseClient.from("operadores").select("*").order("nome");
-    const selectOperador = document.getElementById("filtroOperador");
-    selectOperador.innerHTML = '<option value="">Todos</option>';
+    // Carregar peças
+    const p = await supabaseClient.from("pecas").select("*").order("nome");
+    const selPeca = document.getElementById("filtroPeca");
 
-    ops.data.forEach(o => {
-      const op = document.createElement("option");
-      op.value = o.nome;
-      op.textContent = o.nome;
-      selectOperador.appendChild(op);
+    p.data?.forEach(x => {
+      selPeca.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
+    });
+
+    // Carregar operadores
+    const o = await supabaseClient.from("operadores").select("*").order("nome");
+    const selOperador = document.getElementById("filtroOperador");
+
+    o.data?.forEach(x => {
+      selOperador.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
     });
   }
 
-  carregarListas();
+  carregarFiltros();
 
 
+  // ==============================
+  // CARREGAR RELATÓRIO
+  // ==============================
+  async function carregarRelatorio() {
+    const fMaq = document.getElementById("filtroMaquina").value;
+    const fPeca = document.getElementById("filtroPeca").value;
+    const fOper = document.getElementById("filtroOperador").value;
+    const fData = document.getElementById("filtroData").value;
 
-  // ============================================
-  // Função principal: gerar relatório
-  // ============================================
-  async function gerarRelatorio() {
+    let query = supabaseClient.from("producao").select("*").order("data_e_hora", { ascending: false });
 
-    const maq = document.getElementById("filtroMaquina").value;
-    const peca = document.getElementById("filtroPeca").value;
-    const oper = document.getElementById("filtroOperador").value;
-    const dataInicio = document.getElementById("dataInicio").value;
-    const dataFim = document.getElementById("dataFim").value;
-
-    let query = supabaseClient
-      .from("producao")
-      .select(`
-        *,
-        maquinas ( nome )
-      `)
-      .order("id", { ascending: false });
-
-    if (maq) query = query.eq("maquina_id", maq);
-    if (peca) query = query.eq("peca", peca);
-    if (oper) query = query.eq("operador", oper);
-    if (dataInicio) query = query.gte("data_hora", `${dataInicio} 00:00:00`);
-    if (dataFim) query = query.lte("data_hora", `${dataFim} 23:59:59`);
+    if (fMaq) query = query.eq("máquina", fMaq);
+    if (fPeca) query = query.eq("peças", fPeca);
+    if (fOper) query = query.eq("operador", fOper);
+    if (fData) query = query.gte("data_e_hora", fData + " 00:00:00").lte("data_e_hora", fData + " 23:59:59");
 
     const { data, error } = await query;
 
-    const tabela = document.getElementById("tabelaResultados");
+    const tabela = document.getElementById("tabelaDados");
     tabela.innerHTML = "";
 
-    let total = 0;
+    let totalGeral = 0;
 
-    if (data && data.length > 0) {
-      data.forEach(linha => {
-        total += linha.quantidade;
-
-        tabela.innerHTML += `
-          <tr>
-            <td>${new Date(linha.data_hora).toLocaleString()}</td>
-            <td>${linha.maquinas?.nome || "Desconhecida"}</td>
-            <td>${linha.operador}</td>
-            <td>${linha.peca}</td>
-            <td>${linha.quantidade}</td>
-          </tr>
-        `;
-      });
-    }
-
-    document.getElementById("totalGeral").textContent = `Total: ${total} peças`;
-  }
-
-
-
-  // ============================================
-  // Realtime para atualizar relatório automaticamente
-  // ============================================
-  supabaseClient.channel("realtime-relatorios")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "producao" },
-      () => gerarRelatorio()
-    )
-    .subscribe();
-
-</script>
-
-</body>
-</html>
+    data?.forEach(row => {
+      tabela.innerHTML += `
+        <tr>
+          <td>${new Date(row.data_e_hora).toLocaleString()}</td>
+          <td>${row.máquina}</td>
+          <td>${row.peças}</td>
+          <td>${row.operador}</td>
+          <td>${row.quantidade}</td>
