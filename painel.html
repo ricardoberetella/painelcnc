@@ -1,212 +1,210 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatórios de Produção</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Produção CNC</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
+    html, body {
+      height: 100%;
       margin: 0;
-      background: #0f172a;
-      color: white;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
-    header {
-      background: #1e293b;
-      padding: 20px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
+    header { text-align: center; margin-bottom: 15px; }
+    header h1 { color: #38bdf8; margin: 0; font-size: 24px; }
+    header h2 { color: #f1f5f9; margin-top: 5px; font-size: 14px; }
+
+    .painel {
+      background-color: rgba(255, 255, 255, 0.08);
+      padding: 15px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      height: 400px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
-    .area {
-      padding: 20px;
-    }
-
-    .filtros {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    select, input, button {
-      padding: 10px;
+    label { display: block; margin-top: 8px; font-weight: bold; font-size: 12px; }
+    select {
+      width: 100%;
+      padding: 6px;
       border: none;
       border-radius: 6px;
+      margin-top: 3px;
+      font-size: 12px;
+      color: #0f172a;
     }
+
+    .contador { text-align: center; margin: 15px 0; }
+    .contador h3 { color: #38bdf8; margin-bottom: 5px; font-size: 16px; }
+    .contador p { font-size: 32px; color: #fbbf24; font-weight: bold; margin: 0; }
+
+    .info { text-align: center; font-size: 10px; color: #94a3b8; margin-bottom: 5px; }
 
     button {
-      background: #10b981;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    table {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
+      padding: 6px;
+      margin-top: 5px;
+      background-color: #38bdf8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
     }
+    button:hover { background-color: #0284c7; }
 
-    th, td {
-      border-bottom: 1px solid #334155;
+    .admin-panel {
+      display: none; /* inicialmente escondido */
+      margin-top: 10px;
       padding: 10px;
-      text-align: left;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      font-size: 12px;
     }
 
-    th {
-      background: #1e293b;
-    }
-
-    .total-box {
-      background: #1e293b;
-      padding: 15px;
-      border-radius: 10px;
-      margin-top: 20px;
-      font-size: 20px;
-      font-weight: bold;
-    }
+    footer { margin-top: auto; padding: 10px; font-size: 9px; color: #94a3b8; text-align: center; }
   </style>
+</head>
+<body>
+  <header>
+    <h1>Controle de Produção</h1>
+    <h2 id="operador"></h2>
+  </header>
+
+  <div class="painel">
+    <div>
+      <label for="peca">Peça:</label>
+      <select id="peca"><option value="">Carregando peças...</option></select>
+
+      <div class="contador">
+        <h3>Produção Atual</h3>
+        <p id="contador">Selecione a peça</p>
+      </div>
+
+      <div class="info">
+        <div id="atualizado"></div>
+        <div id="dataHora"></div>
+      </div>
+
+      <!-- Painel administrativo -->
+      <div id="adminPanel" class="admin-panel">
+        <strong>Relatórios Administrativos</strong>
+        <p>Aqui você poderá ver relatórios por máquina, operador, peça e dia.</p>
+      </div>
+    </div>
+
+    <div>
+      <button id="novaProducao">Iniciar Nova Produção</button>
+      <button id="sair">Sair</button>
+    </div>
+  </div>
+
+  <footer></footer>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-</head>
+  <script>
+    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-<body>
+    const operador = localStorage.getItem("operador_nome");
+    const perfil = localStorage.getItem("operador_perfil"); // novo item do login
 
-<header>Relatórios de Produção CNC</header>
+    if (!operador) window.location.href = "index.html";
+    else document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
 
-<div class="area">
-
-  <div class="filtros">
-
-    <select id="filtroMaquina">
-      <option value="">Todas as Máquinas</option>
-    </select>
-
-    <select id="filtroPeca">
-      <option value="">Todas as Peças</option>
-    </select>
-
-    <select id="filtroOperador">
-      <option value="">Todos Operadores</option>
-    </select>
-
-    <input type="date" id="filtroData">
-
-    <button onclick="carregarRelatorio()">Filtrar</button>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Data/Hora</th>
-        <th>Máquina</th>
-        <th>Peça</th>
-        <th>Operador</th>
-        <th>Quantidade</th>
-      </tr>
-    </thead>
-    <tbody id="tabelaDados"></tbody>
-  </table>
-
-  <div class="total-box">
-    Total Produzido: <span id="totalGeral">0</span>
-  </div>
-
-</div>
-
-
-<script>
-  const supabaseClient = supabase.createClient(
-    "https://wcgrcntyencwkwwnuwyz.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"
-  );
-
-  const perfil = localStorage.getItem("perfil");
-  if (perfil !== "administrador") {
-    alert("Acesso apenas para administradores.");
-    window.location.href = "index.html";
-  }
-
-
-  async function carregarFiltros() {
-
-    const m = await supabaseClient.from("maquinas").select("*").order("nome");
-    m.data?.forEach(x => {
-      filtroMaquina.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
-    });
-
-    const p = await supabaseClient.from("pecas").select("*").order("nome");
-    p.data?.forEach(x => {
-      filtroPeca.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
-    });
-
-    const o = await supabaseClient.from("operadores").select("*").order("nome");
-    o.data?.forEach(x => {
-      filtroOperador.innerHTML += `<option value="${x.nome}">${x.nome}</option>`;
-    });
-  }
-
-  carregarFiltros();
-
-
-  async function carregarRelatorio() {
-    let fMaq = filtroMaquina.value;
-    let fPeca = filtroPeca.value;
-    let fOper = filtroOperador.value;
-    let fData = filtroData.value;
-
-    let query = supabaseClient.from("producao")
-      .select("*")
-      .order("data_hora", { ascending: false }); // CORRIGIDO
-
-    if (fMaq) query = query.eq("máquina", fMaq);
-    if (fPeca) query = query.eq("peças", fPeca);
-    if (fOper) query = query.eq("operador", fOper);
-
-    if (fData) {
-      query = query
-        .gte("data_hora", fData + " 00:00:00") // CORRIGIDO
-        .lte("data_hora", fData + " 23:59:59"); // CORRIGIDO
+    // Mostra painel administrativo apenas se for admin
+    if (perfil === "admin") {
+      document.getElementById("adminPanel").style.display = "block";
     }
 
-    const { data } = await query;
+    const pecaSelect = document.getElementById("peca");
+    const contadorEl = document.getElementById("contador");
+    const atualizadoEl = document.getElementById("atualizado");
+    const dataHoraEl = document.getElementById("dataHora");
 
-    tabelaDados.innerHTML = "";
-    let total = 0;
+    let pecaAtual = "";
 
-    data?.forEach(row => {
-      tabelaDados.innerHTML += `
-        <tr>
-          <td>${new Date(row.data_hora).toLocaleString()}</td>
-          <td>${row.máquina}</td>
-          <td>${row.peças}</td>
-          <td>${row.operador}</td>
-          <td>${row.quantidade}</td>
-        </tr>
-      `;
-      total += row.quantidade;
+    function atualizarDataHora() {
+      const agora = new Date();
+      dataHoraEl.textContent = `Data/Hora: ${agora.toLocaleString("pt-BR")}`;
+    }
+    setInterval(atualizarDataHora, 1000);
+    atualizarDataHora();
+
+    async function carregarListas() {
+      try {
+        const { data: pecas } = await supabase.from("pecas").select("id, nome").order("id");
+        pecaSelect.innerHTML = '<option value="">Selecione...</option>';
+        pecas.forEach(p => pecaSelect.appendChild(new Option(p.nome, p.id)));
+      } catch (err) {
+        console.error(err);
+        contadorEl.textContent = "Erro ao carregar peças!";
+      }
+    }
+    carregarListas();
+
+    async function atualizarContagem() {
+      if (!pecaAtual) {
+        contadorEl.textContent = "Selecione a peça";
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from("producao")
+          .select("quantidade")
+          .eq("operador", operador)
+          .eq("peca", pecaAtual)
+          .order("data_hora", { ascending: false })
+          .limit(1);
+        const qtd = data && data.length > 0 ? data[0].quantidade : 0;
+        contadorEl.textContent = qtd;
+        atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleTimeString("pt-BR")}`;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    supabase
+      .channel('realtime_producao')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
+        const novo = payload.new;
+        if (novo.peca == pecaAtual && novo.operador == operador) {
+          atualizarContagem();
+        }
+      })
+      .subscribe();
+
+    setInterval(atualizarContagem, 5000);
+
+    pecaSelect.addEventListener("change", () => { 
+      pecaAtual = pecaSelect.value; 
+      atualizarContagem(); 
     });
 
-    totalGeral.textContent = total;
-  }
+    document.getElementById("novaProducao").addEventListener("click", () => {
+      pecaSelect.value = "";
+      pecaAtual = "";
+      contadorEl.textContent = "Selecione a peça";
+      atualizadoEl.textContent = "";
+    });
 
-  carregarRelatorio();
-
-
-  supabaseClient
-    .channel("realtime-relatorios")
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "producao" },
-      carregarRelatorio
-    )
-    .subscribe();
-
-</script>
-
+    document.getElementById("sair").addEventListener("click", () => {
+      localStorage.removeItem("operador_nome");
+      localStorage.removeItem("operador_perfil");
+      window.location.href = "index.html";
+    });
+  </script>
 </body>
 </html>
