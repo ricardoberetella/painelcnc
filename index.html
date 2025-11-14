@@ -61,45 +61,55 @@
 
   <div class="login-container">
     <h2>Produção CNC</h2>
-    <p>Digite seu nome</p>
+    <p>Login por nome e senha</p>
 
     <input type="text" id="nome" placeholder="Nome do operador" />
+    <input type="password" id="senha" placeholder="Senha" />
+
     <button id="entrar">Entrar</button>
   </div>
 
 
 <script>
-  const supabase = supabase.createClient(
+
+  // Cliente Supabase
+  const supabaseClient = supabase.createClient(
     "https://wcgrcntyencwkwwnuwyz.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"
   );
 
   document.getElementById("entrar").addEventListener("click", async () => {
     const nomeDigitado = document.getElementById("nome").value.trim().toUpperCase();
+    const senhaDigitada = document.getElementById("senha").value.trim();
 
     if (nomeDigitado.length < 2) {
       alert("Digite um nome válido.");
       return;
     }
 
-    // Busca por nome exato ou parcialmente
-    const { data, error } = await supabase
-      .from("operadores")
-      .select("*")
-      .ilike("nome", `%${nomeDigitado}%`);
-
-    if (error || !data || data.length === 0) {
-      alert("Operador não encontrado.");
+    if (senhaDigitada.length < 1) {
+      alert("Digite sua senha.");
       return;
     }
 
-    // Se vier mais de um operador, pega o primeiro
-    const operadorObj = data[0];
+    // Busca operador com nome + senha + ativo
+    const { data, error } = await supabaseClient
+      .from("operadores")
+      .select("*")
+      .eq("nome", nomeDigitado)
+      .eq("senha", senhaDigitada)
+      .eq("ativo", true)
+      .maybeSingle();
 
-    const operador = operadorObj.nome;
-    const perfil = (operadorObj.perfil || "").toLowerCase();
+    if (error || !data) {
+      alert("Nome ou senha incorretos, ou operador inativo.");
+      return;
+    }
 
-    // Salva localmente
+    const operador = data.nome;
+    const perfil = (data.perfil || "").toLowerCase();
+
+    // salva sessão local
     localStorage.setItem("operador", operador);
     localStorage.setItem("perfil", perfil);
 
@@ -109,6 +119,7 @@
       window.location.href = "painel.html";
     }
   });
+
 </script>
 
 </body>
