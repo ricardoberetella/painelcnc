@@ -1,179 +1,139 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Painel de Produção CNC</title>
-  <style>
-    html, body { height: 100%; margin: 0; font-family: Arial, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    header { text-align: center; margin-bottom: 15px; }
-    header h1 { color: #38bdf8; margin: 0; font-size: 24px; }
-    header h2 { color: #f1f5f9; margin-top: 5px; font-size: 14px; }
-    .painel { background-color: rgba(255, 255, 255, 0.08); padding: 15px; border-radius: 12px; width: 90%; max-width: 460px; height: 480px; box-shadow: 0 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; }
-    label { display: block; margin-top: 8px; font-weight: bold; font-size: 12px; }
-    select { width: 100%; padding: 8px; border-radius: 6px; border: none; margin-top: 4px; font-size: 14px; color: #0f172a; }
-    .contador { text-align: center; margin: 15px 0; }
-    .contador h3 { color: #38bdf8; margin-bottom: 5px; font-size: 16px; }
-    .contador p { font-size: 48px; color: #fbbf24; font-weight: bold; margin: 0; }
-    .info { text-align: center; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
-    button { width: 100%; padding: 10px; margin-top: 6px; background-color: #38bdf8; color: white; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
-    button:hover { background-color: #0284c7; }
-    .admin-panel { display: none; margin-top: 10px; padding: 10px; background-color: rgba(255,255,255,0.06); border-radius: 6px; font-size: 12px; color: #fff; }
-    footer { margin-top: auto; padding: 10px; font-size: 10px; color: #94a3b8; text-align: center; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Controle de Produção</h1>
-    <h2 id="operador"></h2>
-  </header>
-
-  <div class="painel">
-    <div>
-      <label for="peca">Peça:</label>
-      <select id="peca"><option value="">Carregando peças...</option></select>
-
-      <div class="contador">
-        <h3>Produção Atual</h3>
-        <p id="contador">—</p>
-      </div>
-
-      <div class="info">
-        <div id="atualizado"></div>
-        <div id="dataHora"></div>
-      </div>
-
-      <!-- Painel administrativo -->
-      <div id="adminPanel" class="admin-panel">
-        <strong>Relatórios Administrativos</strong>
-        <p>Aqui você poderá ver relatórios por máquina, operador, peça e dia. (Acesse Relatórios se for administrador)</p>
-      </div>
-    </div>
-
-    <div>
-      <button id="novaProducao">Iniciar Nova Produção (criar registro)</button>
-      <button id="sair">Sair</button>
-    </div>
-  </div>
-
-  <footer>Produção CNC • Painel Operador</footer>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Produção - CNC</title>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    const SUPABASE_URL = "https://wcgrcntyencwkwwnuwyz.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const operador = localStorage.getItem("operador_nome");
-    const perfil = (localStorage.getItem("operador_perfil") || "").toLowerCase();
-
-    if (!operador) window.location.href = "index.html";
-    else document.getElementById("operador").textContent = `👷 Operador: ${operador}`;
-
-    // Mostra painel administrativo apenas se for administrador
-    if (perfil === "administrador") {
-      document.getElementById("adminPanel").style.display = "block";
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      padding: 20px;
     }
 
-    const pecaSelect = document.getElementById("peca");
-    const contadorEl = document.getElementById("contador");
-    const atualizadoEl = document.getElementById("atualizado");
-    const dataHoraEl = document.getElementById("dataHora");
-
-    let pecaAtual = "";
-
-    function atualizarDataHora() {
-      const agora = new Date();
-      dataHoraEl.textContent = `Data/Hora: ${agora.toLocaleString("pt-BR")}`;
-    }
-    setInterval(atualizarDataHora, 1000);
-    atualizarDataHora();
-
-    async function carregarListas() {
-      try {
-        // traz o nome e usa o nome como value para manter consistência com a tabela 'producao.peca'
-        const { data: pecas, error } = await supabase.from("pecas").select("id, nome").order("id");
-        if (error) throw error;
-        pecaSelect.innerHTML = '<option value="">Selecione...</option>';
-        pecas.forEach(p => pecaSelect.appendChild(new Option(p.nome, p.nome)));
-      } catch (err) {
-        console.error(err);
-        pecaSelect.innerHTML = '<option value="">Erro ao carregar peças</option>';
-        contadorEl.textContent = "Erro ao carregar peças!";
-      }
-    }
-    carregarListas();
-
-    async function atualizarContagem() {
-      if (!pecaAtual) {
-        contadorEl.textContent = "Selecione a peça";
-        atualizadoEl.textContent = "";
-        return;
-      }
-      try {
-        const { data } = await supabase
-          .from("producao")
-          .select("quantidade")
-          .eq("operador", operador)
-          .eq("peca", pecaAtual)
-          .order("data_hora", { ascending: false })
-          .limit(1);
-        const qtd = data && data.length > 0 ? data[0].quantidade : 0;
-        contadorEl.textContent = qtd;
-        atualizadoEl.textContent = `Atualizado às ${new Date().toLocaleTimeString("pt-BR")}`;
-      } catch (err) {
-        console.error(err);
-        contadorEl.textContent = "Erro ao obter contagem";
-      }
+    h1, h2 {
+      text-align: center;
+      margin: 0;
+      padding: 10px;
     }
 
-    // realtime: atualiza quando há novos inserts
-    supabase
-      .channel('realtime_producao')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'producao' }, payload => {
-        const novo = payload.new;
-        if (novo.peca == pecaAtual && novo.operador == operador) {
-          atualizarContagem();
-        }
-      })
-      .subscribe();
+    select, button {
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+    }
 
-    setInterval(atualizarContagem, 5000);
+    button {
+      background: #10b981;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-    pecaSelect.addEventListener("change", () => {
-      pecaAtual = pecaSelect.value;
-      atualizarContagem();
-    });
+    button:hover {
+      background: #059669;
+    }
 
-    document.getElementById("novaProducao").addEventListener("click", async () => {
-      if (!pecaAtual) {
-        alert("Selecione uma peça antes de iniciar nova produção.");
-        return;
-      }
-      try {
-        // cria um registro inicial (quantidade 0) para marcar início de produção
-        const { data, error } = await supabase.from("producao").insert([{
-          maquina: "",             // opcional: preencher se desejar
-          operador: operador,
-          peca: pecaAtual,
-          quantidade: 0,
-          data_hora: new Date().toISOString()
-        }]);
-        if (error) throw error;
-        // atualiza visual imediatamente
-        atualizarContagem();
-        alert("Nova produção iniciada (registro criado).");
-      } catch (err) {
-        console.error(err);
-        alert("Erro ao iniciar nova produção.");
-      }
-    });
+    .box {
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+      backdrop-filter: blur(6px);
+    }
 
-    document.getElementById("sair").addEventListener("click", () => {
-      localStorage.removeItem("operador_nome");
-      localStorage.removeItem("operador_perfil");
-      window.location.href = "index.html";
-    });
-  </script>
-</body>
-</html>
+    .contador {
+      font-size: 48px;
+      text-align: center;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<h1>PAINEL DE PRODUÇÃO</h1>
+
+<div class="box">
+  <h2>Operador: <span id="operadorNome"></span></h2>
+  <h3>Máquina: <span id="maquinaNome"></span></h3>
+</div>
+
+<div class="box">
+  <label>Selecione a peça:</label>
+  <select id="pecasSelect"></select>
+</div>
+
+<div class="box">
+  <button id="novaProducao">INICIAR NOVA PRODUÇÃO</button>
+</div>
+
+<div class="box">
+  <h2>Contagem Atual</h2>
+  <div class="contador" id="contador">0</div>
+</div>
+
+
+<script>
+
+  // ============================================
+  // 1) DEFINA A MÁQUINA AQUI
+  // Cada Raspberry recebe sua versão com o ID correto
+  // Torno 01 = 1 | Torno 02 = 2 | Torno 03 = 3
+  // ============================================
+  const maquinaID = 1;
+  const nomeMaquina = maquinaID === 1 ? "Torno 01"
+                    : maquinaID === 2 ? "Torno 02"
+                    : "Torno 03";
+
+  document.getElementById("maquinaNome").textContent = nomeMaquina;
+
+  // ============================================
+  // Conexão Supabase
+  // ============================================
+  const supabaseClient = supabase.createClient(
+    "https://wcgrcntyencwkwwnuwyz.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjZ3JjbnR5ZW5jd2t3d251d3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDM1NDksImV4cCI6MjA3ODQ3OTU0OX0.dKUY44Cc_D0I00h0ZbhCVmuIonqMlxcIPBhHUOK1YwM"
+  );
+
+  let operador = localStorage.getItem("operador");
+  if (!operador) {
+    window.location.href = "index.html";
+  }
+  document.getElementById("operadorNome").textContent = operador;
+
+
+  // ============================================
+  // Carregar lista de peças
+  // ============================================
+  async function carregarPecas() {
+    const { data, error } = await supabaseClient
+      .from("pecas")
+      .select("*")
+      .order("nome");
+
+    if (!error) {
+      const select = document.getElementById("pecasSelect");
+      select.innerHTML = "";
+
+      data.forEach(p => {
+        const op = document.createElement("option");
+        op.value = p.nome;
+        op.textContent = p.nome;
+        select.appendChild(op);
+      });
+    }
+  }
+
+
+  // ============
